@@ -13,46 +13,60 @@ enum GateTypeEnum {And, Xor, Input, InputLiteral, Output};
 typedef enum GateTypeEnum GateType;
 
 class Gate {
- private:
-  SecuritySettings *sec;
- public:
-  GateType gate_type;
-  unsigned int id;
-  unsigned long input_index;
-  Gate *input1;
-  bool input1_resolved;
-  Gate *input2;
-  bool input2_resolved;
-  int unresolved_outputs;
-  CipherBit* output_value;
-  std::vector<Gate*> outputs;
-  void init_vars();
-  void calc_z_vector(const PublicKey &pk);
+  private:
+    SecuritySettings *sec;
+    void initialize_output_cipher_bits();
 
-  unsigned long int degree;
-  unsigned long int norm;
+    // TODO: Refactor
+    void calc_z_vector(const PublicKey &pk);
 
-  // Input gates
-  //Gate(GateType gate_type, CipherBit* value, unsigned long lambda);
-  Gate(GateType gate_type, unsigned long input_index, SecuritySettings *sec);
+    // Add output gate to the vector of output gates
+    void add_output_gate(Gate *output_gate);
 
-  // Input Literal gates
-  Gate(GateType gate_type, bool input, SecuritySettings *sec);
+    // For each of output gates, resolve their input status
+    void resolve_output_gates();
 
-  // Output gates
-  Gate(GateType gate_type, Gate *input, SecuritySettings *sec);
+    const bool is_ciphertext_greater_than_public_key_integers();
 
-  // Logic gates
-  Gate(GateType gate_type, Gate *input1, Gate *input2, SecuritySettings *sec);
+    // If the ciphertext is larger than the public key integers,
+    // reduce by taking remaninders
+    void mod_reduce(const PublicKey &pk);
+  public:
+    GateType gate_type;
+    unsigned int id;
+    unsigned long input_index;
+    Gate *input1, *input2;                 // Pointer to the input gates
+    bool input1_resolved, input2_resolved; // Is the output of Input i computed?
+    CipherBit* output_cipher_bits;
+    std::vector<Gate*> outputs;
 
-  void add_output(Gate *output_gate);
+    // Degree of the polynomial.
+    // Adds up culmatively through multiple layers of gates.
+    unsigned long int degree;
 
-  void update_outputs();
-  void evaluate(const PublicKey &pk);
-  void mod_reduce(const PublicKey &pk);
-  bool is_input() {return gate_type == Input;}
-  void set_input(CipherBit** inputs);
+    // L1-Norm - sum of absolute values of the coefficients of the polynomial.
+    // Adds up culmatively through multiple layers of gates.
+    unsigned long int norm;
 
+    // Input gates
+    //Gate(GateType gate_type, CipherBit* value, unsigned long lambda);
+    Gate(GateType gate_type, unsigned long input_index, SecuritySettings *sec);
+
+    // Input Literal gates
+    Gate(GateType gate_type, bool input, SecuritySettings *sec);
+
+    // Output gates
+    Gate(GateType gate_type, Gate *input, SecuritySettings *sec);
+
+    // Logic gates
+    Gate(GateType gate_type, Gate *input1, Gate *input2, SecuritySettings *sec);
+
+    void evaluate(const PublicKey &pk);
+
+    const bool is_input() {return gate_type == Input;}
+
+    // Forward ciphertext, Z-vector from one of the input gates
+    void forward_ciphertext(CipherBit** inputs);
 };
 
 #endif //CIRCUIT_H

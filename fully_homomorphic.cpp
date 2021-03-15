@@ -58,10 +58,6 @@ void FullyHomomorphic::key_gen (PrivateKey &sk, PublicKey &pk) {
   }
   mpz_clear(half_ssk);
 
-  // printf("x_p: ");
-  // mpz_out_str(NULL, 10, x_p);
-  // printf("\n");
-
   mpz_t_arr u_vector = new __mpz_struct* [sec->public_key_y_vector_length];
   create_u_vector(u_vector, x_p, S);
 
@@ -69,25 +65,6 @@ void FullyHomomorphic::key_gen (PrivateKey &sk, PublicKey &pk) {
   pk.old_key = spk;
   pk.old_key_extra = spk2;
   pk.y_vector = u_vector;
-
-  /* Print out the sum of x_i where i in S and x_p to make sure they match. They do! :)
-  mpz_t temp_sum;
-  mpz_init(temp_sum);
-  for (unsigned int i = 0; i < theta; i++) {
-	mpz_add(temp_sum, temp_sum, u_vector[S[i]]);
-  }
-
-  mpz_t modulus;
-  mpz_init2(modulus, kappa+2);
-  mpz_setbit(modulus, kappa+1);
-  mpz_mod(temp_sum, temp_sum, modulus);
-  mpz_clear(modulus);
-
-  mpz_out_str(NULL, 10, temp_sum);
-  printf("\n");
-  mpz_out_str(NULL, 10, x_p);
-  printf("\n");
-  */
 }
 
 
@@ -537,14 +514,14 @@ CipherBit** FullyHomomorphic::evaluate(std::vector<Gate*> output_gates, CipherBi
 	}
 
 	if (cur_gate->input1_resolved && cur_gate->input2_resolved) {
-	  if (cur_gate->is_input()) {
-		cur_gate->set_input(inputs);
-	  }
+	  if (cur_gate->is_input())
+		cur_gate->forward_ciphertext(inputs);
+
 	  cur_gate->evaluate(pk);
 	  evaluation_stack.pop();
 
 	  if (cur_gate->gate_type == Output) {
-		output_vector[output_index] = cur_gate->output_value;
+		output_vector[output_index] = cur_gate->output_cipher_bits;
 		output_index++;
 	  }
 	}
