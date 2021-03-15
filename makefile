@@ -1,6 +1,6 @@
 CC=g++
 CFLAGS=-c -Wall -g -m64
-LDFLAGS=-Wl,-Bstatic -lgmp -Wl,-Bdynamic -lcryptopp -lpthread
+LDFLAGS=-lgmp -Wl,-Bdynamic -lcryptopp -lpthread
 EXECUTABLE=fully_homomorphic
 TEST_EXECUTABLE=test_fully_homomorphic
 DEMO_EXECUTABLE=demo_fully_homomorphic

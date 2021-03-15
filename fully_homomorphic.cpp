@@ -9,10 +9,10 @@ FullyHomomorphic::FullyHomomorphic (SecuritySettings *security_settings) : sec(s
   unsigned int init_seed = rand();
   srand(init_seed);
   printf("seed: %u\n", init_seed);
-  rng.Put((byte*) &init_seed, sizeof(unsigned int));
+  rng.IncorporateEntropy((CryptoPP::byte*) &init_seed, sizeof(unsigned int));
 
   gmp_randinit_default(rand_state);
-  byte seed_bytes[8];
+  CryptoPP::byte seed_bytes[8];
   rng.GenerateBlock(seed_bytes, 8);
   mpz_t seed;
   mpz_init(seed);
@@ -337,7 +337,7 @@ void FullyHomomorphic::old_encrypt_bit(mpz_t result, const PublicKey &pk, const 
   mpz_t sum;
   mpz_init(sum);
 
-  byte randomness = rng.GenerateByte();
+  CryptoPP::byte randomness = rng.GenerateByte();
   unsigned int randomness_counter = 0; // Current bit of randomness being used
 
   for (unsigned int i = 1; i < sec->public_key_old_key_length; i++) {
