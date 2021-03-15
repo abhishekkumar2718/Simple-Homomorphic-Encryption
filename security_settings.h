@@ -1,8 +1,10 @@
 #ifndef SECURITY_SETTINGS_H
 #define SECURITY_SETTINGS_H
 
+#include <iostream>
 #include <cmath>
-#include <cstdio>
+
+using namespace std;
 
 class SecuritySettings {
  private:
@@ -22,6 +24,8 @@ class SecuritySettings {
   unsigned long int public_key_y_vector_length;
 
   SecuritySettings(unsigned long int lambda);
+
+  friend ostream& operator<<(ostream& os, const SecuritySettings &sec);
 };
 
 #endif //SECURITY_SETTINGS_H

@@ -6,6 +6,9 @@ int main(int argc, char** argv) {
   FullyHomomorphic fh(security_settings);
   PrivateKey sk;
   PublicKey pk;
+
+  cout << *security_settings << endl;
+
   fh.key_gen(sk, pk);
   //fh.print_key(sk, pk);
 

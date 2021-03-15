@@ -1,7 +1,7 @@
-#include "fully_homomorphic.h"
-#include "utilities.h"
 #include "circuit.h"
+#include "fully_homomorphic.h"
 #include "security_settings.h"
+#include "utilities.h"
 
 bool OUTPUT = true;
 
@@ -212,6 +212,8 @@ int main(int argc, char** argv) {
   PrivateKey sk;
   PublicKey pk;
   fh.key_gen(sk, pk);
+
+  cout << *security_settings << endl;
 
   for (int i = 2; i < argc; i++) {
 	if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--all") == 0) {

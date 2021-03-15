@@ -42,4 +42,4 @@ security_settings.o : security_settings.cpp
 	$(CC) $(CFLAGS) security_settings.cpp
 
 clean :
-	rm -rf *.o fully_homomorphic
+	rm -rf *.o fully_homomorphic demo_fully_homomorphic test_fully_homomorphic

@@ -51,6 +51,7 @@ bool DemoVoteCounter::verify_vote(unsigned int vote_id) {
 
 DemoVoteCounter::DemoVoteCounter(unsigned int num_candidates) : num_candidates(num_candidates) {
   sec = new SecuritySettings(4);
+  cout << *sec << endl;
   fh = new FullyHomomorphic(sec);
   fh->key_gen(sk, pk);
 }
