@@ -32,7 +32,6 @@ class FullyHomomorphic {
   FullyHomomorphic(SecuritySettings *security_settings);
   void key_gen(PrivateKey &sk, PublicKey &pk);
   void print_key(const PrivateKey &sk, const PublicKey &pk);
-  void print_cipher_bit(const CipherBit &c);
   void encrypt_bit(CipherBit &result, const PublicKey &pk, const bool m);
   bool decrypt_bit(const CipherBit &c, const PrivateKey &sk);
   void clear_cipher_bit(CipherBit &c);

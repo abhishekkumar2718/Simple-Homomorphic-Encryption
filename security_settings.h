@@ -25,7 +25,7 @@ class SecuritySettings {
 
   SecuritySettings(unsigned long int lambda);
 
-  friend ostream& operator<<(ostream& os, const SecuritySettings &sec);
+  friend ostream& operator<<(ostream &os, const SecuritySettings &sec);
 };
 
 #endif //SECURITY_SETTINGS_H

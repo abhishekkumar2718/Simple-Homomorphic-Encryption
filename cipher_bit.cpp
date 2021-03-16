@@ -1,4 +1,8 @@
 #include "cipher_bit.h"
+// clang-format off
+#include <iostream>
+#include <gmp.h>
+// clang-format on
 
 void CipherBit::initialize_ciphertext() {
   mpz_init(old_ciphertext);
@@ -42,4 +46,16 @@ const bool CipherBit::greater_than_base_2(const unsigned long int size) {
   mpz_clear(bound);
 
   return result;
+}
+
+ostream& operator<<(ostream &os, const CipherBit &cipher_bit) {
+  os << "--- Cipher Bit ---" << std::endl;
+  os << "Cipher Text: " << cipher_bit.old_ciphertext  << std::endl;
+  os << "Size of Cipher Text (in bits): " << mpz_sizeinbase(cipher_bit.old_ciphertext, 2) << std::endl;
+  os << "Z-Vector (first 50 elements): " ;
+  for (int i = 0; i < 50; i++)
+    os << cipher_bit.z_vector[i] << " ";
+  os << endl;
+
+  return os;
 }

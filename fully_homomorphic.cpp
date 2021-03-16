@@ -292,23 +292,6 @@ void FullyHomomorphic::print_key(const PrivateKey &sk, const PublicKey &pk) {
   printf("...\n");
 }
 
-void FullyHomomorphic::print_cipher_bit(const CipherBit &c) {
-  textcolor(BRIGHT, WHITE);
-  printf("Cipher Bit");
-  resettextcolor();
-  printf(": {");
-  textcolor(BRIGHT, GREEN);
-  mpz_out_str(NULL, 10, c.old_ciphertext);
-  resettextcolor();
-  printf(", {");
-  for (unsigned long int i = 0; i < 49; i++) {
-	printf("%lu, ", c.z_vector[i]);
-  }
-  printf("%lu...", c.z_vector[sec->public_key_y_vector_length-1]);
-  printf("} } ");
-  printf("size: %lu\n", mpz_sizeinbase(c.old_ciphertext, 2));
-}
-
 /* ENCRYPTION */
 void FullyHomomorphic::old_encrypt_bit(mpz_t result, const PublicKey &pk, const bool m) {
   mpz_t sum;

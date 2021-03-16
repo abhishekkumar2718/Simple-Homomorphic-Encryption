@@ -20,6 +20,8 @@ class CipherBit {
 
     const bool greater_than_base_2(const unsigned long int size);
 
+    friend ostream& operator<<(ostream &os, const CipherBit &cipher_bit);
+
     ~CipherBit() { delete[] z_vector; }
 };
 

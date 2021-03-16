@@ -82,6 +82,8 @@ void Gate::evaluate(const PublicKey &pk) {
 
     // If the ciphertext is greater than public key integers, reduce
     // it by taking remainders
+    //
+    // TODO: Add better description
     if (output_cipher_bits->greater_than_base_2(sec->gamma))
       output_cipher_bits->reduce_by_public_key(*sec, pk);
 

@@ -77,10 +77,9 @@ void DemoVoteCounter::get_votes() {
 	for (unsigned int i = 0; i < num_candidates; i++) {
 	  encrypted_bit = new CipherBit;
 	  fh->encrypt_bit(*encrypted_bit, pk, i == vote-1);
-	  fh->print_cipher_bit(*encrypted_bit);
+          cout << *encrypted_bit << endl;
 	  encrypted_votes_vector.push_back(encrypted_bit);
 	}
-	printf("\n");
 	num_votes++;
   }
 

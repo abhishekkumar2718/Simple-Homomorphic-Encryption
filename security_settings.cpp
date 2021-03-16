@@ -16,7 +16,7 @@ SecuritySettings::SecuritySettings(unsigned long int lambda) : lambda(lambda) {
 }
 
 ostream& operator<<(ostream& os, const SecuritySettings& security) {
-  os << "Security Parameters" << endl;
+  os << "--- Security Parameters ---" << endl;
   os << "Bit-length of integers in public key (gamma): " << security.gamma << endl;
   os << "Bit-length of secret key (eta): " << security.eta << endl;
   os << "Bit-length of noise (rho): " << security.rho << endl;
