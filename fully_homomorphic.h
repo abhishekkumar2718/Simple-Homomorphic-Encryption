@@ -28,9 +28,12 @@ class FullyHomomorphic {
   // Generate the additional somewhat public key
   SomewhatPublicKey generate_additional_somewhat_public_key(const SomewhatPrivateKey &sk);
 
+  // Generate private key (also called S-vector)
+  PrivateKey generate_private_key();
+
   // TODO: Refactor
   void choose_random_d(mpz_t result, const SomewhatPrivateKey p);
-  unsigned int* create_S_vector();
+
   void create_u_vector(mpz_t_arr result, mpz_t x_p, unsigned int* S);
 
   void store_cipher_bit(FILE* stream, CipherBit &c);

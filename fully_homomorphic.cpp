@@ -1,4 +1,5 @@
 #include "fully_homomorphic.h"
+#include <set>
 
 unsigned int FullyHomomorphic::MAX_SOMEWHAT_PUBLIC_KEY_TRIES = 10;
 
@@ -25,8 +26,7 @@ void FullyHomomorphic::generate_key_pair(PrivateKey &sk, PublicKey &pk) {
   pk.old_key = generate_somewhat_public_key(ssk);
   pk.old_key_extra = generate_additional_somewhat_public_key(ssk);
 
-  // Note: this being an unsigned int arr limits lambda...
-  unsigned int* S = create_S_vector();
+  sk = generate_private_key();
 
   mpz_t x_p;
   mpz_init(x_p);
@@ -44,9 +44,8 @@ void FullyHomomorphic::generate_key_pair(PrivateKey &sk, PublicKey &pk) {
   mpz_clear(half_ssk);
 
   mpz_t_arr u_vector = new __mpz_struct* [sec->public_key_y_vector_length];
-  create_u_vector(u_vector, x_p, S);
+  create_u_vector(u_vector, x_p, sk);
 
-  sk = S;
   pk.y_vector = u_vector;
 }
 
@@ -85,24 +84,27 @@ void FullyHomomorphic::create_u_vector(mpz_t_arr result, mpz_t x_p, unsigned int
   mpz_clear(modulus);
 }
 
-unsigned int* FullyHomomorphic::create_S_vector() {
-  unsigned int* result = new unsigned int[sec->private_key_length];
-  for (unsigned int i = 0; i < sec->private_key_length; i++) {
-	bool duplicate;
-	do {
-	  result[i] = rng.GenerateWord32(0, sec->public_key_y_vector_length-1);
-	  duplicate = false;
-	  for (unsigned int j = 0; j < i; j++) {
-		if (result[i] == result[j]) {
-		  duplicate = true;
-		  continue;
-		}
-	  }
-	} while (duplicate);
+// Generate private key, which consists of private_key_length integers
+// between [0, public_key_y_vector_length)
+//
+// TODO: Rewrite in terms of lambda
+PrivateKey FullyHomomorphic::generate_private_key() {
+  auto key_length = sec->private_key_length;
+  PrivateKey key = new unsigned int[key_length];
+
+  std::set<unsigned int> generated_keys;
+
+  while (generated_keys.size() < key_length) {
+    auto word = rng.GenerateWord32(0, sec->public_key_y_vector_length - 1);
+
+    if (generated_keys.find(word) == generated_keys.end()) {
+      key[generated_keys.size()] = word;
+      generated_keys.insert(word);
+    }
   }
-  return result;
+
+  return key;
 }
-  
 
 void FullyHomomorphic::create_somewhat_private_key(mpz_t result) {
   mpz_t temp;
