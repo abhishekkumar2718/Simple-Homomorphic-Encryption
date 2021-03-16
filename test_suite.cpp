@@ -178,7 +178,7 @@ void test_circuits(FullyHomomorphic &fh, const PublicKey &pk, const PrivateKey &
 void benchmark(FullyHomomorphic &fh, PublicKey &pk, PrivateKey &sk, SecuritySettings *sec) {
   OUTPUT = false;
   clock_t start_time = clock();
-  fh.key_gen(sk, pk);
+  fh.generate_key_pair(sk, pk);
   clock_t key_gen_finished = clock();
   printf("Key Generation: %f\n", (double)(key_gen_finished - start_time)/CLOCKS_PER_SEC);
   test_encrypt_bit_vector(fh, pk, sk);
@@ -195,13 +195,13 @@ int main(int argc, char** argv) {
   FullyHomomorphic fh(security_settings);
   PrivateKey sk;
   PublicKey pk;
-  fh.key_gen(sk, pk);
+  fh.generate_key_pair(sk, pk);
 
   cout << *security_settings << endl;
 
   for (int i = 2; i < argc; i++) {
 	if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--all") == 0) {
-	  fh.key_gen(sk, pk);
+	  fh.generate_key_pair(sk, pk);
 	  test_encrypt_bit(fh, pk, sk);
 	  test_encrypt_bit_vector(fh, pk, sk);
 	  //fh.test_decryption_circuit(pk, sk);
@@ -209,23 +209,23 @@ int main(int argc, char** argv) {
 	  test_circuits(fh, pk, sk, security_settings);
 	}
 	if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--single-bit") == 0) {
-	  fh.key_gen(sk, pk);
+	  fh.generate_key_pair(sk, pk);
 	  test_encrypt_bit(fh, pk, sk);
 	}
 	if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--bit-vector") == 0) {
-	  fh.key_gen(sk, pk);
+	  fh.generate_key_pair(sk, pk);
 	  test_encrypt_bit_vector(fh, pk, sk);
 	}
 	if (strcmp(argv[i], "-dc") == 0 || strcmp(argv[i], "--decryption-circuit") == 0) {
-	  fh.key_gen(sk, pk);
+	  fh.generate_key_pair(sk, pk);
 	  fh.test_decryption_circuit(pk, sk);
 	}
 	if (strcmp(argv[i], "-g") == 0 || strcmp(argv[i], "--gates") == 0) {
-	  fh.key_gen(sk, pk);
+	  fh.generate_key_pair(sk, pk);
 	  test_gates(fh, pk, sk, security_settings);
 	}
 	if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--circuits") == 0) {
-	  fh.key_gen(sk, pk);
+	  fh.generate_key_pair(sk, pk);
 	  test_circuits(fh, pk, sk, security_settings);
 	}
 	if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--timing") == 0) {

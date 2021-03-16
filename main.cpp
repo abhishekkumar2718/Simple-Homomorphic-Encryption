@@ -9,6 +9,6 @@ int main(int argc, char** argv) {
 
   cout << *security_settings << endl;
 
-  fh.key_gen(sk, pk);
+  fh.generate_key_pair(sk, pk);
   fh.test_decryption_circuit(pk, sk);
 }

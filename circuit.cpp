@@ -1,4 +1,5 @@
 #include "circuit.h"
+#include <algorithm>
 
 // Input gate
 Gate::Gate(GateType gate_type, unsigned long input_index, SecuritySettings *sec) : sec(sec), gate_type(gate_type), input_index(input_index) {
@@ -57,9 +58,9 @@ Gate::Gate(GateType gate_type, Gate *input1, Gate *input2, SecuritySettings *sec
   // the L1 norm.
   if (gate_type == And) {
 	degree = input1->degree + input2->degree;
-	norm = max(input1->norm, input2->norm);
+	norm = std::max(input1->norm, input2->norm);
   } else {
-	degree = max(input1->degree, input2->degree);
+	degree = std::max(input1->degree, input2->degree);
 	norm = input1->norm + input2->norm;
   }
 

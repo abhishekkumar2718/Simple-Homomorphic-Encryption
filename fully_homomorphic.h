@@ -21,9 +21,15 @@ class FullyHomomorphic {
   CryptoPP::RandomPool rng;
 
   void create_somewhat_private_key(SomewhatPrivateKey private_key);
-  void create_somewhat_public_key(SomewhatPublicKey result, SomewhatPrivateKey sk);
-  void create_additional_somewhat_public_key(SomewhatPublicKey result, SomewhatPrivateKey sk);
-  void choose_random_d(mpz_t result, SomewhatPrivateKey p);
+
+  // Generate the somewhat public key
+  SomewhatPublicKey generate_somewhat_public_key(const SomewhatPrivateKey &sk);
+
+  // Generate the additional somewhat public key
+  SomewhatPublicKey generate_additional_somewhat_public_key(const SomewhatPrivateKey &sk);
+
+  // TODO: Refactor
+  void choose_random_d(mpz_t result, const SomewhatPrivateKey p);
   unsigned int* create_S_vector();
   void create_u_vector(mpz_t_arr result, mpz_t x_p, unsigned int* S);
 
@@ -37,7 +43,11 @@ class FullyHomomorphic {
   void seed_random_state(void *source, size_t n_bytes);
  public:
   FullyHomomorphic(SecuritySettings *security_settings);
-  void key_gen(PrivateKey &sk, PublicKey &pk);
+
+  // Generate private, public key pair and assign to
+  // sk and pk variables
+  void generate_key_pair(PrivateKey &sk, PublicKey &pk);
+
   void print_key(const PrivateKey &sk, const PublicKey &pk);
   void encrypt_bit(CipherBit &result, const PublicKey &pk, const bool m);
   bool decrypt_bit(const CipherBit &c, const PrivateKey &sk);
@@ -52,11 +62,8 @@ class FullyHomomorphic {
 
   bool is_allowed_circuit(std::vector<Gate*> output_gates);
 
-  /* static CipherBit TRUE; */
-  /* static CipherBit FALSE; */
-
-  // For debugging
   mpz_t ssk;
+
   void old_encrypt_bit(mpz_t result, const PublicKey &pk, const bool m);
 };
 

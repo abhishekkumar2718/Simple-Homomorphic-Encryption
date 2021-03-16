@@ -15,24 +15,15 @@ FullyHomomorphic::FullyHomomorphic (SecuritySettings *security_settings) : sec(s
   seed_random_state(seed_bytes, n_bytes);
 }
 
-void FullyHomomorphic::key_gen (PrivateKey &sk, PublicKey &pk) {
-  printf("Generating a key pair\n");
-  //SomewhatPrivateKey ssk;
+void FullyHomomorphic::generate_key_pair(PrivateKey &sk, PublicKey &pk) {
+  cout << "--- Generating Key Pair ---" << endl;
+
   mpz_init(ssk);
-  SomewhatPublicKey spk = new __mpz_struct* [sec->public_key_old_key_length];
-  SomewhatPublicKey spk2 = new __mpz_struct* [sec->gamma+1];
 
   create_somewhat_private_key(ssk);
 
-  /*
-  printf("Secret Key: ");
-  mpz_out_str(NULL, 10, ssk);
-  printf("\n");
-  printf("Bit length: %u\n", (int)mpz_sizeinbase(ssk, 2));
-  */
-
-  create_somewhat_public_key(spk, ssk);
-  create_additional_somewhat_public_key(spk2, ssk);
+  pk.old_key = generate_somewhat_public_key(ssk);
+  pk.old_key_extra = generate_additional_somewhat_public_key(ssk);
 
   // Note: this being an unsigned int arr limits lambda...
   unsigned int* S = create_S_vector();
@@ -56,11 +47,8 @@ void FullyHomomorphic::key_gen (PrivateKey &sk, PublicKey &pk) {
   create_u_vector(u_vector, x_p, S);
 
   sk = S;
-  pk.old_key = spk;
-  pk.old_key_extra = spk2;
   pk.y_vector = u_vector;
 }
-
 
 void FullyHomomorphic::create_u_vector(mpz_t_arr result, mpz_t x_p, unsigned int* S) {
   printf("Creating a U vector for public key\n");
@@ -117,7 +105,6 @@ unsigned int* FullyHomomorphic::create_S_vector() {
   
 
 void FullyHomomorphic::create_somewhat_private_key(mpz_t result) {
-  printf("Creating somewhat homomorphic private key\n");
   mpz_t temp;
   mpz_init2(temp, sec->eta-1);
   mpz_setbit(temp, sec->eta-2); // 2^(eta-2)
@@ -140,52 +127,56 @@ void FullyHomomorphic::create_somewhat_private_key(mpz_t result) {
   // printf("\n");
 }
 
-void FullyHomomorphic::create_somewhat_public_key(SomewhatPublicKey result, SomewhatPrivateKey sk) {
-  printf("Creating somewhat homomorphic public key\n");
-  unsigned int try_count = 0;
-  while (true) {
-	try_count++;
-	printf("try #%u\n", try_count);
-	if (try_count > MAX_SOMEWHAT_PUBLIC_KEY_TRIES) {
-	  printf("Could not create a somewhat public key!!! Try a different seed.\n");
-	  exit(1);
-	}
-	unsigned long int max_index = 0;
-	for (unsigned long int i = 0; i < sec->public_key_old_key_length; i++) {
-	  result[i] = new mpz_t;
-	  mpz_init(result[i]);
-	  choose_random_d(result[i], sk);
-	  if (mpz_cmp(result[i], result[max_index]) > 0) {
-		max_index = i;
-	  }
-	  // mpz_out_str(NULL, 10, result[i]);
-	  // printf("\n");
-	}
-	mpz_t mod_result;
-	mpz_init(mod_result);
-	mpz_correct_mod(mod_result, result[max_index], sk);
-	if (mpz_odd_p(result[max_index]) && mpz_even_p(mod_result)) {
-	  mpz_swap(result[0], result[max_index]);
-	  /*
-	  printf("x_0: ");
-	  mpz_out_str(NULL, 10, result[0]);
-	  printf("\n");
-	  printf("x_0%%p: ");
-	  mpz_out_str(NULL, 10, mod_result);
-	  printf("\n");
-	  */
-	  mpz_clear(mod_result);
-	  return;
-	}
-	for (unsigned long int i = 0; i < sec->public_key_old_key_length; i++) {
-	  mpz_clear(result[i]);
-	  delete result[i];
-	}
+SomewhatPublicKey FullyHomomorphic::generate_somewhat_public_key(const SomewhatPrivateKey &sk) {
+  auto key_length = sec->public_key_old_key_length;
+  SomewhatPublicKey key = new __mpz_struct* [key_length];
+
+  for (unsigned int i = 0; i < key_length; i++) {
+    key[i] = new mpz_t;
+    mpz_init(key[i]);
   }
+
+  for (unsigned int try_count = 0; try_count < MAX_SOMEWHAT_PUBLIC_KEY_TRIES; try_count++) {
+    bool valid_key = false;
+    unsigned long int max_index = 0;
+
+    for (unsigned long int i = 0; i < key_length; i++) {
+      choose_random_d(key[i], sk);
+
+      if (mpz_cmp(key[i], key[max_index]) > 0)
+        max_index = i;
+    }
+
+    mpz_t mod_result;
+    mpz_init(mod_result);
+    mpz_correct_mod(mod_result, key[max_index], sk);
+
+    // The largest number X[0] must be odd
+    // TODO: Document meaning of mod_result
+    valid_key = mpz_odd_p(key[max_index]) && mpz_even_p(mod_result);
+
+    mpz_clear(mod_result);
+
+    if (valid_key) {
+      mpz_swap(key[0], key[max_index]);
+      return key;
+    }
+  }
+
+  for (unsigned int i = 0; i < key_length; i++) {
+    mpz_clear(key[i]);
+    delete key[i];
+  }
+
+  delete[] key;
+  cout << "Could not generate a somewhat public key!" << endl;
+  cout << "Try with a different seed!" << endl;
+  exit(1);
 }
 
-void FullyHomomorphic::create_additional_somewhat_public_key(SomewhatPublicKey result, SomewhatPrivateKey sk) {
-  printf("Creating additional elements for somewhat homomorphic public key\n");
+SomewhatPublicKey FullyHomomorphic::generate_additional_somewhat_public_key(const SomewhatPrivateKey &sk) {
+  auto key_length = sec->gamma + 1;
+  SomewhatPublicKey key = new __mpz_struct*[key_length];
 
   // Initialize range for q's
   mpz_t q_range;
@@ -206,33 +197,33 @@ void FullyHomomorphic::create_additional_somewhat_public_key(SomewhatPublicKey r
   mpz_sub_ui(r_shift, r_shift, 1); // 2^rho - 1
 
   mpz_t temp;
-
+  mpz_init(temp);
   for (unsigned long int i = 0; i < sec->gamma+1; i++) {
-	mpz_init(temp);
-	result[i] = new mpz_t;
-	mpz_init(result[i]);
+    key[i] = new mpz_t;
+    mpz_init(key[i]);
 
-	mpz_urandomm(temp, rand_state, q_range); // pick a q
-	mpz_add(temp, temp, q_range); // adjust from [0,q_range] to [q_range, q_range*2]
+    mpz_urandomm(temp, rand_state, q_range); // pick a q
+    mpz_add(temp, temp, q_range); // adjust from [0,q_range] to [q_range, q_range*2]
 
-	mpz_mul(result[i], sk, temp); // p*q
+    mpz_mul(key[i], sk, temp); // p*q
 
-	mpz_urandomm(temp, rand_state, r_range); // pick a r
+    mpz_urandomm(temp, rand_state, r_range); // pick a r
 
-	mpz_sub(temp, temp, r_shift); // Now r is in range [-2^rho + 1, 2^rho)
+    mpz_sub(temp, temp, r_shift); // Now r is in range [-2^rho + 1, 2^rho)
 
-	mpz_add(result[i], result[i], temp); // p*q + r
-	mpz_clear(temp);
+    mpz_add(key[i], key[i], temp); // p*q + r
 
-	mpz_mul_2exp(result[i], result[i], 1); // 2(p*q + r)
+    mpz_mul_2exp(key[i], key[i], 1); // 2(p*q + r)
 
-	mpz_mul_2exp(q_range, q_range, 1); // Adjust q range for next i
+    mpz_mul_2exp(q_range, q_range, 1); // Adjust q range for next i
   }
 
-  printf("Finished creating additional elements for somewhat homomorphic public key\n");
+  mpz_clear(temp);
+
+  return key;
 }
 
-void FullyHomomorphic::choose_random_d(mpz_t result, SomewhatPrivateKey p) {
+void FullyHomomorphic::choose_random_d(mpz_t result, const SomewhatPrivateKey p) {
   mpz_t temp;
   mpz_init(temp);
 
@@ -599,43 +590,6 @@ void FullyHomomorphic::test_decryption_circuit(const PublicKey &pk, const Privat
   CipherBit** evaluated_ciphertext = evaluate(output_gates, in_vector, pk);
 
   bool* evaluated_plaintext = decrypt_bit_vector(sk, evaluated_ciphertext, output_gates.size());
-  // Print out the a[look_at_index]
-  /*
-  for (unsigned long int i = look_at_index*(n+1); i < (look_at_index+1)*(n+1); i++) {
-	if ((bool) evaluated_plaintext[i])
-	  printf ("true ");
-	else
-	  printf ("false ");
-  }
-  */   
-  unsigned long int w_length = log2(sec->theta+1);
-  unsigned long int p_length = pow(2, w_length);
-
-  /* These are definitely correct
-  printf("a[i][0] vector:\n");
-  for (unsigned long int i = 0; i < sec->big_theta; i++) {
-	printf("%u", (bool) evaluated_plaintext[(w_length+1)*(n+1) + p_length*sec->big_theta + i*(n+1)]);
-  }
-  printf("\n");
-  */
-
-  /*
-  for (unsigned long int i = 0; i < w_length+1; i++) {
-	if ((bool) evaluated_plaintext[i])
-	  printf("true ");
-	else
-	  printf("false ");
-  }
-  printf("\n");
-
-  for (unsigned long int i = 0; i < sec->big_theta+1; i++) {
-	printf("row %2lu of p array: ", i);
-	for (unsigned long int j = i*(p_length+1); j < (i+1)*(p_length+1); j++) {
-	  printf("%u", (bool) evaluated_plaintext[(w_length+1)*(n+1) + j]);
-	}
-	printf("\n");
-  }
-  */
 
   unsigned long int output_length = ceil(log(n+1) / log(3.0/2)) + 2;
 

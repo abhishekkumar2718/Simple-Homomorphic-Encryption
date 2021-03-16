@@ -53,7 +53,7 @@ DemoVoteCounter::DemoVoteCounter(unsigned int num_candidates) : num_candidates(n
   sec = new SecuritySettings(4);
   cout << *sec << endl;
   fh = new FullyHomomorphic(sec);
-  fh->key_gen(sk, pk);
+  fh->generate_key_pair(sk, pk);
 }
 
 void DemoVoteCounter::get_votes() {

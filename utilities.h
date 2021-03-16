@@ -21,7 +21,7 @@
 
 #define COLOR_OUTPUT 1
 
-void mpz_correct_mod(mpz_t result, mpz_t n, mpz_t d);
+void mpz_correct_mod(mpz_t result, const mpz_t n, const mpz_t d);
 unsigned long int max(unsigned long int a, unsigned long int b);
 void textcolor(int attr, int fg);
 void resettextcolor();

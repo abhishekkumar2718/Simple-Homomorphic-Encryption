@@ -29,8 +29,8 @@ demo_vote_counter.o : demo_vote_counter.cpp
 main.o : main.cpp
 	$(CC) $(CFLAGS) main.cpp
 
-utilities.o : utilities.c
-	$(CC) $(CFLAGS) utilities.c
+utilities.o : utilities.cpp
+	$(CC) $(CFLAGS) utilities.cpp
 
 fully_homomorphic.o : fully_homomorphic.cpp fully_homomorphic.h type_defs.h cipher_bit.o
 	$(CC) $(CFLAGS) fully_homomorphic.cpp -lgmp -lcryptopp -lpthreads
