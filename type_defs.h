@@ -29,11 +29,4 @@ struct PublicKeyStruct {
 
 typedef struct PublicKeyStruct PublicKey;
 
-struct CipherBitStruct {
-  mpz_t old_ciphertext;
-  unsigned long* z_vector;
-};
-typedef struct CipherBitStruct CipherBit;
-
-
 #endif //TYPE_DEFS_H

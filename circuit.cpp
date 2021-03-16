@@ -1,55 +1,52 @@
 #include "circuit.h"
 
-void Gate::initialize_output_cipher_bits() {
-  output_cipher_bits = new CipherBit;
-  mpz_init(output_cipher_bits->old_ciphertext);
-}
-
 // Input gate
 Gate::Gate(GateType gate_type, unsigned long input_index, SecuritySettings *sec) : sec(sec), gate_type(gate_type), input_index(input_index) {
-  initialize_output_cipher_bits();
-
   input1_resolved = true;
   input2_resolved = true;
 
   degree = 1;
   norm = 1;
+
+  output_cipher_bits = new CipherBit;
+  output_cipher_bits->initialize_ciphertext();
 }
 
 // Input Literal gate
 Gate::Gate(GateType gate_type, bool input, SecuritySettings *sec) : sec(sec), gate_type(gate_type) {
-  initialize_output_cipher_bits();
-
   input1_resolved = true;
   input2_resolved = true;
+
+  degree = 0;
+  norm = input;
+
+  output_cipher_bits = new CipherBit;
+  output_cipher_bits->initialize_ciphertext();
 
   mpz_set_ui(output_cipher_bits->old_ciphertext, input);
 
   auto z_vector_length = sec->public_key_y_vector_length;
-  output_cipher_bits->z_vector = new unsigned long[z_vector_length];
+  output_cipher_bits->initialize_z_vector(z_vector_length);
   for (unsigned int i = 0; i < z_vector_length; i++)
 	output_cipher_bits->z_vector[i] = 0;
-
-  degree = 0;
-  norm = input;
 }
 
 // Output gate
 Gate::Gate(GateType gate_type, Gate *input, SecuritySettings *sec) : sec(sec), gate_type(gate_type), input1(input) {
-  initialize_output_cipher_bits();
-
   input1_resolved = false;
   input2_resolved = true;
 
   degree = input->degree;
   norm = input->norm;
+
   input->add_output_gate(this);
+
+  output_cipher_bits = new CipherBit;
+  output_cipher_bits->initialize_ciphertext();
 }
 
 // Logic gate
 Gate::Gate(GateType gate_type, Gate *input1, Gate *input2, SecuritySettings *sec) : sec(sec), gate_type(gate_type), input1(input1), input2(input2) {
-  initialize_output_cipher_bits();
-
   input1_resolved = false;
   input2_resolved = false;
 
@@ -65,8 +62,12 @@ Gate::Gate(GateType gate_type, Gate *input1, Gate *input2, SecuritySettings *sec
 	degree = max(input1->degree, input2->degree);
 	norm = input1->norm + input2->norm;
   }
+
+  output_cipher_bits = new CipherBit;
+  output_cipher_bits->initialize_ciphertext();
 }
 
+//  Evaluate the gate (as a part of larger circuit)
 void Gate::evaluate(const PublicKey &pk) {
   if (!input1_resolved || !input2_resolved)
       throw new std::runtime_error("This gate isn't ready to be evaluated!");
@@ -79,38 +80,15 @@ void Gate::evaluate(const PublicKey &pk) {
     else
       mpz_add(output_cipher_bits->old_ciphertext, input1->output_cipher_bits->old_ciphertext, input2->output_cipher_bits->old_ciphertext);
 
-    if (is_ciphertext_greater_than_public_key_integers())
-      mod_reduce(pk);
+    // If the ciphertext is greater than public key integers, reduce
+    // it by taking remainders
+    if (output_cipher_bits->greater_than_base_2(sec->gamma))
+      output_cipher_bits->reduce_by_public_key(*sec, pk);
 
-    calc_z_vector(pk);
+    output_cipher_bits->calculate_z_vector(*sec, pk);
   }
 
   resolve_output_gates();
-}
-
-// If the ciphertext is larger than the public key integers, reduce it by taking remainders
-// TODO: Needs more clarification
-void Gate::mod_reduce(const PublicKey &pk) {
-  for (int i = sec->gamma; i >= 0; i--)
-    mpz_mod(output_cipher_bits->old_ciphertext, output_cipher_bits->old_ciphertext, pk.old_key_extra[i]);
-}
-
-// TODO: This duplicates code in fully_homomorphic.cpp. Split this out into possibly a CipherBit class
-void Gate::calc_z_vector(const PublicKey &pk) {
-  unsigned int precision = ceil(log2(sec->theta)) + 3;
-  unsigned long bitmask = (1l << (precision + 1)) - 1;
-  auto z_vector_length = sec->public_key_y_vector_length;
-
-  output_cipher_bits->z_vector = new unsigned long[z_vector_length];
-
-  mpz_t temp;
-  mpz_init(temp);
-  for (unsigned int i = 0; i < z_vector_length; i++) {
-	mpz_mul(temp, output_cipher_bits->old_ciphertext, pk.y_vector[i]);
-	mpz_fdiv_q_2exp(temp, temp, sec->kappa-precision);
-	output_cipher_bits->z_vector[i] = mpz_get_ui(temp) & bitmask;
-  }
-  mpz_clear(temp);
 }
 
 // Forward the ciphertext, Z-vector from one of the input gates
@@ -120,7 +98,7 @@ void Gate::forward_ciphertext(CipherBit** inputs) {
   mpz_set(output_cipher_bits->old_ciphertext, input->old_ciphertext);
 
   auto z_vector_length = sec->public_key_y_vector_length;
-  output_cipher_bits->z_vector = new unsigned long[z_vector_length];
+  output_cipher_bits->initialize_z_vector(z_vector_length);
   for (unsigned int i = 0; i < z_vector_length; i++)
 	output_cipher_bits->z_vector[i] = input->z_vector[i];
 }
@@ -138,17 +116,4 @@ void Gate::resolve_output_gates() {
 
 void Gate::add_output_gate(Gate *output_gate) {
   outputs.push_back(output_gate);
-}
-
-const bool Gate::is_ciphertext_greater_than_public_key_integers() {
-    // public_key_size = 2 ^ bit-length of integers in the public key
-    mpz_t public_key_size;
-    mpz_init2(public_key_size, sec->gamma + 1);
-    mpz_setbit(public_key_size, sec->gamma);
-
-    bool result = (mpz_cmp(output_cipher_bits->old_ciphertext, public_key_size) > 0);
-
-    mpz_clear(public_key_size);
-
-    return result;
 }

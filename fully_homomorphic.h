@@ -1,6 +1,7 @@
 #ifndef FULLY_HOMOMORPHIC_H
 #define FULLY_HOMOMORPHIC_H
 
+#include "cipher_bit.h"
 #include "type_defs.h"
 #include <cstdio>
 #include <cmath>

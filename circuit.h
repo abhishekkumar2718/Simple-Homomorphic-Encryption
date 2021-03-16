@@ -1,6 +1,7 @@
 #ifndef CIRCUIT_H
 #define CIRCUIT_H
 
+#include "cipher_bit.h"
 #include "type_defs.h"
 #include "security_settings.h"
 #include "utilities.h"
@@ -8,29 +9,18 @@
 #include <stdexcept>
 #include <cmath>
 
-
 enum GateTypeEnum {And, Xor, Input, InputLiteral, Output};
 typedef enum GateTypeEnum GateType;
 
 class Gate {
   private:
     SecuritySettings *sec;
-    void initialize_output_cipher_bits();
-
-    // TODO: Refactor
-    void calc_z_vector(const PublicKey &pk);
 
     // Add output gate to the vector of output gates
     void add_output_gate(Gate *output_gate);
 
     // For each of output gates, resolve their input status
     void resolve_output_gates();
-
-    const bool is_ciphertext_greater_than_public_key_integers();
-
-    // If the ciphertext is larger than the public key integers,
-    // reduce by taking remaninders
-    void mod_reduce(const PublicKey &pk);
   public:
     GateType gate_type;
     unsigned int id;
