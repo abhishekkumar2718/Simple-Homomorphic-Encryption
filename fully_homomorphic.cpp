@@ -19,75 +19,43 @@ FullyHomomorphic::FullyHomomorphic (SecuritySettings *security_settings) : sec(s
 void FullyHomomorphic::generate_key_pair(PrivateKey &sk, PublicKey &pk) {
   cout << "--- Generating Key Pair ---" << endl;
 
-  mpz_init(ssk);
-
-  create_somewhat_private_key(ssk);
-
-  pk.old_key = generate_somewhat_public_key(ssk);
-  pk.old_key_extra = generate_additional_somewhat_public_key(ssk);
+  generate_somewhat_private_key(ssk);
 
   sk = generate_private_key();
 
-  mpz_t x_p;
-  mpz_init(x_p);
-  mpz_setbit(x_p, sec->kappa);
+  pk.old_key = generate_somewhat_public_key(ssk);
 
-  mpz_t remainder;
-  mpz_init(remainder);
-  mpz_fdiv_qr(x_p, remainder, x_p, ssk);
-  mpz_t half_ssk;
-  mpz_init(half_ssk);
-  mpz_fdiv_q_2exp(half_ssk, ssk, 1);
-  if (mpz_cmp(remainder, half_ssk) < 0) {
-	mpz_add_ui(x_p, x_p, 1); // fix "rounding" to round up
-  }
-  mpz_clear(half_ssk);
+  pk.old_key_extra = generate_additional_somewhat_public_key(ssk);
 
-  mpz_t_arr u_vector = new __mpz_struct* [sec->public_key_y_vector_length];
-  create_u_vector(u_vector, x_p, sk);
-
-  pk.y_vector = u_vector;
+  pk.y_vector = generate_y_vector(sk);
 }
 
-void FullyHomomorphic::create_u_vector(mpz_t_arr result, mpz_t x_p, unsigned int* S) {
-  printf("Creating a U vector for public key\n");
-  mpz_t sum_u_in_s;
-  mpz_init(sum_u_in_s);
+// Returns a random integer between [2^(eta - 1) + 1, 2^eta + 1]
+// TODO: Ask others whether it is correct
+void FullyHomomorphic::generate_somewhat_private_key(SomewhatPrivateKey key) {
+  mpz_t temp;
 
-  unsigned int final_s = rng.GenerateWord32(0, sec->private_key_length-1);
-  for (unsigned int i = 0; i < sec->public_key_y_vector_length; i++) {
-	result[i] = new mpz_t;
-	mpz_init(result[i]);
-	mpz_urandomb(result[i], rand_state, sec->kappa);
-  }
+  mpz_init(key);
+  mpz_init2(temp, sec->eta-1);
 
-  // Sum up all but the last u_i where i is in S
-  for (unsigned int i = 0; i < sec->private_key_length; i++) {
-	if (i == final_s)
-	  continue;
-	mpz_add(sum_u_in_s, sum_u_in_s, result[S[i]]);
-  }
+  mpz_setbit(temp, sec->eta-2);
+  mpz_add_ui(temp, temp, 1);           // temp: 2^(eta - 2) + 1
 
-  mpz_t modulus;
-  mpz_init2(modulus, sec->kappa+2);
-  mpz_setbit(modulus, sec->kappa+1);
+  mpz_urandomm(key, rand_state, temp); // key:  [0, 2^(eta - 2)]
 
-  mpz_mod(sum_u_in_s, sum_u_in_s, modulus); // Should replace this with a bitmask if it's faster...
-  if (mpz_cmp(x_p, sum_u_in_s) > 0) {
-	mpz_sub(result[S[final_s]], x_p, sum_u_in_s);
-  } else {
-	mpz_sub(result[S[final_s]], x_p, sum_u_in_s);
-	mpz_add(result[S[final_s]], result[S[final_s]], modulus);
-  }
+  mpz_sub_ui(temp, temp, 1);           // temp: 2^(eta - 2)
+  mpz_add(key, key, temp);             // key:  [2^(eta - 2), 2^(eta - 1)]
 
-  mpz_clear(sum_u_in_s);
-  mpz_clear(modulus);
+  mpz_mul_ui(key, key, 2);             // key:  [2^(eta - 1), 2^eta]
+  mpz_add_ui(key, key, 1);             // key:  [2^(eta - 1) + 1, 2^eta + 1]
+
+  mpz_clear(temp);
 }
 
-// Generate private key, which consists of private_key_length integers
-// between [0, public_key_y_vector_length)
+// Generate private key, which consists of theta integers between [0, tau)
 //
-// TODO: Rewrite in terms of lambda
+// tau: sec->private_key_length
+// theta: sec->public_key_y_vector_length
 PrivateKey FullyHomomorphic::generate_private_key() {
   auto key_length = sec->private_key_length;
   PrivateKey key = new unsigned int[key_length];
@@ -104,29 +72,6 @@ PrivateKey FullyHomomorphic::generate_private_key() {
   }
 
   return key;
-}
-
-void FullyHomomorphic::create_somewhat_private_key(mpz_t result) {
-  mpz_t temp;
-  mpz_init2(temp, sec->eta-1);
-  mpz_setbit(temp, sec->eta-2); // 2^(eta-2)
-  mpz_add_ui(temp, temp, 1);
-  mpz_urandomm(result, rand_state, temp);
-
-  mpz_sub_ui(temp, temp, 1);
-  mpz_add(result, result, temp);
-
-  mpz_clear(temp);
-
-  // result is now in the range [2^(eta-2), 2^(eta-1)-1]
-
-  mpz_mul_ui(result, result, 2);
-  mpz_add_ui(result, result, 1);
-
-  // result is now in the range [2^(eta-1)+1, 2^eta-1]
-  // printf("p: ");
-  // mpz_out_str(NULL, 10, result);
-  // printf("\n");
 }
 
 SomewhatPublicKey FullyHomomorphic::generate_somewhat_public_key(const SomewhatPrivateKey &sk) {
@@ -225,6 +170,65 @@ SomewhatPublicKey FullyHomomorphic::generate_additional_somewhat_public_key(cons
   return key;
 }
 
+mpz_t_arr FullyHomomorphic::generate_y_vector(const PrivateKey &sk) {
+  mpz_t x_p, remainder, half_ssk;
+
+  mpz_init(x_p);
+  mpz_init(remainder);
+  mpz_init(half_ssk);
+
+  mpz_setbit(x_p, sec->kappa); // x_p: 2^kappa
+
+  mpz_fdiv_qr(x_p, remainder, x_p, ssk);
+
+  mpz_fdiv_q_2exp(half_ssk, ssk, 1);
+  if (mpz_cmp(remainder, half_ssk) < 0)
+	mpz_add_ui(x_p, x_p, 1); // fix "rounding" to round up
+
+  mpz_t_arr u_vector = new __mpz_struct* [sec->public_key_y_vector_length];
+  generate_u_vector(u_vector, x_p, sk);
+
+  mpz_clear(x_p);
+  mpz_clear(remainder);
+  mpz_clear(half_ssk);
+
+  return u_vector;
+}
+
+void FullyHomomorphic::generate_u_vector(mpz_t_arr result, mpz_t x_p, unsigned int* S) {
+  mpz_t sum_u_in_s;
+  mpz_init(sum_u_in_s);
+
+  unsigned int final_s = rng.GenerateWord32(0, sec->private_key_length-1);
+  for (unsigned int i = 0; i < sec->public_key_y_vector_length; i++) {
+	result[i] = new mpz_t;
+	mpz_init(result[i]);
+	mpz_urandomb(result[i], rand_state, sec->kappa);
+  }
+
+  // Sum up all but the last u_i where i is in S
+  for (unsigned int i = 0; i < sec->private_key_length; i++) {
+	if (i == final_s)
+	  continue;
+	mpz_add(sum_u_in_s, sum_u_in_s, result[S[i]]);
+  }
+
+  mpz_t modulus;
+  mpz_init2(modulus, sec->kappa+2);
+  mpz_setbit(modulus, sec->kappa+1);
+
+  mpz_mod(sum_u_in_s, sum_u_in_s, modulus); // Should replace this with a bitmask if it's faster...
+  if (mpz_cmp(x_p, sum_u_in_s) > 0) {
+	mpz_sub(result[S[final_s]], x_p, sum_u_in_s);
+  } else {
+	mpz_sub(result[S[final_s]], x_p, sum_u_in_s);
+	mpz_add(result[S[final_s]], result[S[final_s]], modulus);
+  }
+
+  mpz_clear(sum_u_in_s);
+  mpz_clear(modulus);
+}
+
 void FullyHomomorphic::choose_random_d(mpz_t result, const SomewhatPrivateKey p) {
   mpz_t temp;
   mpz_init(temp);
@@ -255,28 +259,6 @@ void FullyHomomorphic::choose_random_d(mpz_t result, const SomewhatPrivateKey p)
 
   mpz_add(result, result, temp); // p*q + r
   mpz_clear(temp);
-}
-
-void FullyHomomorphic::print_key(const PrivateKey &sk, const PublicKey &pk) {
-  printf("Private Key: {");
-  for (unsigned int i = 0; i < sec->private_key_length; i++) {
-	printf("%u, ", sk[i]);
-  }
-  printf("}\n");
-
-  printf("Public Key:\n");
-  printf("  Old Key: {");
-  for (unsigned int i = 0; i < 5; i++) {
-	mpz_out_str(NULL, 10, pk.old_key[i]);
-	printf(", ");
-  }
-  printf("...\n");
-  printf("  y Vector: {");
-  for (unsigned int i = 0; i < 5; i++) {
-	mpz_out_str(NULL, 10, pk.y_vector[i]);
-	printf(", ");
-  }
-  printf("...\n");
 }
 
 /* ENCRYPTION */

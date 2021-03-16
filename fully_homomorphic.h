@@ -20,7 +20,8 @@ class FullyHomomorphic {
   gmp_randstate_t rand_state;
   CryptoPP::RandomPool rng;
 
-  void create_somewhat_private_key(SomewhatPrivateKey private_key);
+  // Generate the somewhat private key
+  void generate_somewhat_private_key(SomewhatPrivateKey ssk);
 
   // Generate the somewhat public key
   SomewhatPublicKey generate_somewhat_public_key(const SomewhatPrivateKey &sk);
@@ -34,7 +35,10 @@ class FullyHomomorphic {
   // TODO: Refactor
   void choose_random_d(mpz_t result, const SomewhatPrivateKey p);
 
-  void create_u_vector(mpz_t_arr result, mpz_t x_p, unsigned int* S);
+  // Generate Y-vector for the public key
+  mpz_t_arr generate_y_vector(const PrivateKey &sk);
+
+  void generate_u_vector(mpz_t_arr result, mpz_t x_p, unsigned int* S);
 
   void store_cipher_bit(FILE* stream, CipherBit &c);
 
@@ -51,7 +55,6 @@ class FullyHomomorphic {
   // sk and pk variables
   void generate_key_pair(PrivateKey &sk, PublicKey &pk);
 
-  void print_key(const PrivateKey &sk, const PublicKey &pk);
   void encrypt_bit(CipherBit &result, const PublicKey &pk, const bool m);
   bool decrypt_bit(const CipherBit &c, const PrivateKey &sk);
   void clear_cipher_bit(CipherBit &c);
