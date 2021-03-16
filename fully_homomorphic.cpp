@@ -3,22 +3,16 @@
 unsigned int FullyHomomorphic::MAX_SOMEWHAT_PUBLIC_KEY_TRIES = 10;
 
 FullyHomomorphic::FullyHomomorphic (SecuritySettings *security_settings) : sec(security_settings) {
-  printf("Initializing random seed(s)\n");
-  // TODO: Replace this with an autoseeded random pool for "production"
-  srand(time(NULL));
-  unsigned int init_seed = rand();
-  srand(init_seed);
-  printf("seed: %u\n", init_seed);
-  rng.IncorporateEntropy((CryptoPP::byte*) &init_seed, sizeof(unsigned int));
+  size_t n_bytes = 8;
+  CryptoPP::byte seed_bytes[n_bytes];
 
-  gmp_randinit_default(rand_state);
-  CryptoPP::byte seed_bytes[8];
-  rng.GenerateBlock(seed_bytes, 8);
-  mpz_t seed;
-  mpz_init(seed);
-  mpz_import(seed, 8, 1, 1, 1, 0, seed_bytes);
-  gmp_randseed(this->rand_state, seed);
-  mpz_clear(seed);
+  // Seed the CryptoPP RNG using system time and srand()
+  seed_rng();
+
+  // Generate 8 bytes of entropy to seed the random state
+  rng.GenerateBlock(seed_bytes, n_bytes);
+
+  seed_random_state(seed_bytes, n_bytes);
 }
 
 void FullyHomomorphic::key_gen (PrivateKey &sk, PublicKey &pk) {
@@ -812,6 +806,23 @@ void FullyHomomorphic::store_cipher_bit(FILE* stream, CipherBit &c) {
   mpz_out_raw(stream, c.old_ciphertext);
 }
 
+void FullyHomomorphic::seed_rng() {
+  srand(time(NULL));
+
+  unsigned int init_seed = rand();
+
+  rng.IncorporateEntropy((CryptoPP::byte*) &init_seed, sizeof(unsigned int));
+}
+
+void FullyHomomorphic::seed_random_state(void *source, size_t n_bytes) {
+  mpz_t seed;
+
+  mpz_init(seed);
+  mpz_import(seed, n_bytes, 1, 1, 1, 0, source);
+
+  gmp_randinit_default(rand_state);
+  gmp_randseed(rand_state, seed);
+}
 
 /* TODO:
  * - Still have a small memory leak. I think it has to do with cipher bits not getting delete[]'d, but I get a double free when I try to...

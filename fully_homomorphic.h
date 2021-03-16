@@ -28,6 +28,13 @@ class FullyHomomorphic {
   void create_u_vector(mpz_t_arr result, mpz_t x_p, unsigned int* S);
 
   void store_cipher_bit(FILE* stream, CipherBit &c);
+
+  // TODO: Why both a RNG and a random state?
+  // Seed the CryptoPP RNG using system time and srand()
+  void seed_rng();
+
+  // Seed the GMP random state using entropy generated from RNG
+  void seed_random_state(void *source, size_t n_bytes);
  public:
   FullyHomomorphic(SecuritySettings *security_settings);
   void key_gen(PrivateKey &sk, PublicKey &pk);
