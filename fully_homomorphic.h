@@ -20,18 +20,25 @@ class FullyHomomorphic {
   gmp_randstate_t rand_state;
   CryptoPP::RandomPool rng;
 
-  // Generate the somewhat private key.
+  // Generate the somewhat private key - a random integer between
+  // [2^(eta - 1) + 1, 2^eta + 1].
   void generate_somewhat_private_key(SomewhatPrivateKey ssk);
 
-  // Generate the somewhat public key.
+  // Generate the somewhat public key, which consists of tau + 1 integers
+  // of the form p*q + r where p is the somewhat private key and q lies in
+  // [0, 2^gamma/p), r lies in [-2^rho + 1, 2^rho) such that the largest
+  // integer is odd and the remainder after division by p is is even.
   SomewhatPublicKey generate_somewhat_public_key(const SomewhatPrivateKey &sk);
 
-  // Generate the additional somewhat public key.
+  // Generate gamma + 1 random integers of the form 2*(p*q[i] + r)
+  // where p is the somewhatPrivateKey, q lies in 
+  // [2^(gamma + i - 1)/p, 2^(gamma + i)/p) and r lies in 
+  // [-2^rho - 1, 2^rho + 2).
   SomewhatPublicKey generate_additional_somewhat_public_key(const SomewhatPrivateKey &sk);
 
-  // Generate private key (also called s-vector).
+  // Generate private key (also called s-vector), which consists of tau
+  // unique integers between [0, theta).
   PrivateKey generate_private_key();
-
 
   // Generate y-vector for the public key.
   //
@@ -46,12 +53,13 @@ class FullyHomomorphic {
   // bootstrapping of fully homomorphic encryption circuits possible.
   mpz_t_arr generate_y_vector(const PrivateKey &sk);
 
-  // x_p is the closest integer to 2^kappa/ssk. Used in generating
-  // y-vector.
+  // x_p is the closest integer to 2^kappa/ssk. Used to construct y-vector. 
   void generate_x_p(mpz_t x_p);
 
   // Assigns an integer result = p*q + r where p is the somewhatPrivateKey,
   // q belongs to [0, 2^gamma/p) and r belongs to [-2^rho + 1, 2^rho).
+  //
+  // Used to construct the somewhat public key.
   void choose_random_d(mpz_t result, const SomewhatPrivateKey p);
 
   void store_cipher_bit(FILE* stream, CipherBit &c);

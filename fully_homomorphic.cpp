@@ -31,7 +31,6 @@ void FullyHomomorphic::generate_key_pair(PrivateKey &sk, PublicKey &pk) {
 }
 
 // Returns a random integer between [2^(eta - 1) + 1, 2^eta + 1]
-// TODO: Ask others whether it is correct
 void FullyHomomorphic::generate_somewhat_private_key(SomewhatPrivateKey key) {
   mpz_t temp;
 
@@ -52,7 +51,8 @@ void FullyHomomorphic::generate_somewhat_private_key(SomewhatPrivateKey key) {
   mpz_clear(temp);
 }
 
-// Generate private key, which consists of tau unique integers between [0, theta)
+// Generate private key (also called s-vector), which consists of tau
+// unique integers between [0, theta).
 //
 // tau: sec->private_key_length
 // theta: sec->public_key_y_vector_length
@@ -76,7 +76,10 @@ PrivateKey FullyHomomorphic::generate_private_key() {
   return key;
 }
 
-// TODO: What is somewhat public key?
+// Generate the somewhat public key, which consists tau + 1 integers
+// of the form p*q + r where p is the somewhat private key and q lies in
+// [0, 2^gamma/p), r lies in [-2^rho + 1, 2^rho) such that the largest
+// integer is odd and the remainder after division by p is even.
 SomewhatPublicKey FullyHomomorphic::generate_somewhat_public_key(const SomewhatPrivateKey &sk) {
   auto key_length = sec->public_key_old_key_length;
   SomewhatPublicKey key = new __mpz_struct* [key_length];
@@ -101,8 +104,8 @@ SomewhatPublicKey FullyHomomorphic::generate_somewhat_public_key(const SomewhatP
     mpz_init(mod_result);
     mpz_correct_mod(mod_result, key[max_index], sk);
 
-    // The largest number X[0] must be odd
-    // TODO: Document meaning of mod_result
+    // If the largest integer is odd and the remainder after division
+    // by p is even, we have generated a valid somewhat public key.
     valid_key = mpz_odd_p(key[max_index]) && mpz_even_p(mod_result);
 
     mpz_clear(mod_result);
@@ -124,7 +127,7 @@ SomewhatPublicKey FullyHomomorphic::generate_somewhat_public_key(const SomewhatP
   exit(1);
 }
 
-// Generates gamma + 1 random integers of the form 2*(p*q[i] + r[i])
+// Generates gamma + 1 random integers of the form 2*(p*q[i] + r)
 // where p is the secret key, q lies in [2^(gamma + i - 1)/p, 2^(gamma + i)/p)
 // and r lies in [-2^rho - 1, 2^rho + 2).
 SomewhatPublicKey FullyHomomorphic::generate_additional_somewhat_public_key(const SomewhatPrivateKey &sk) {
