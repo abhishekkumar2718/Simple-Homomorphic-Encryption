@@ -126,7 +126,7 @@ SomewhatPublicKey FullyHomomorphic::generate_somewhat_public_key(const SomewhatP
 
 // Generates gamma + 1 random integers of the form 2*(p*q[i] + r[i])
 // where p is the secret key, q lies in [2^(gamma + i - 1)/p, 2^(gamma + i)/p)
-// and r lies in [-2^rho - 1, 2^rho + 2)
+// and r lies in [-2^rho - 1, 2^rho + 2).
 SomewhatPublicKey FullyHomomorphic::generate_additional_somewhat_public_key(const SomewhatPrivateKey &sk) {
   auto key_length = sec->gamma + 1;
   SomewhatPublicKey key = new __mpz_struct*[key_length];
@@ -257,36 +257,37 @@ void FullyHomomorphic::generate_x_p(mpz_t x_p) {
   mpz_clear(half_ssk);
 }
 
+// Assigns an integer result = p*q + r where p is the somewhatPrivateKey,
+// q belongs to [0, 2^gamma/p) and r belongs [-2^rho + 1, 2^rho).
 void FullyHomomorphic::choose_random_d(mpz_t result, const SomewhatPrivateKey p) {
-  mpz_t temp;
+  mpz_t temp, q_range, r_range, r_shift;
+
   mpz_init(temp);
 
-  mpz_t range;
-  mpz_init2(range, sec->gamma+1);
-  mpz_setbit(range, sec->gamma); // 2^gamma
-  mpz_cdiv_q(range, range, p); // (2^gamma)/p
+  mpz_init2(q_range, sec->gamma + 1);
+  mpz_setbit(q_range, sec->gamma);         // q_range: 2^gamma
+  mpz_cdiv_q(q_range, q_range, p);         // q_range: 2^gamma/p
 
-  mpz_urandomm(temp, rand_state, range); // pick a q
-  mpz_clear(range);
+  mpz_init2(r_range, sec->rho + 2);
+  mpz_setbit(r_range, sec->rho + 1);       // r_range: 2^(rho + 1)
+  mpz_add_ui(r_range, r_range, 1);         // r_range: 2^(rho + 1) + 1
 
-  mpz_mul(result, p, temp); // p*q
+  mpz_init2(r_shift, sec->rho + 1);
+  mpz_setbit(r_shift, sec->rho);           // r_shift: 2^(rho)
+  mpz_sub_ui(r_shift, r_shift, 1);         // r_shift: 2^rho - 1
 
-  mpz_init2(range, sec->rho+2);
-  mpz_setbit(range, sec->rho+1); // 2^(rho+1)
-  mpz_add_ui(range, range, 1); // 2^(rho+1) + 1
+  mpz_urandomm(temp, rand_state, q_range); // pick a random integer q between [0, q_range)
+  mpz_mul(result, p, temp);                // result: p*q
 
-  mpz_urandomm(temp, rand_state, range); // pick a r
-  mpz_clear(range);
+  mpz_urandomm(temp, rand_state, r_range); // pick a random integer r betwen [0, r_range)
+  mpz_sub(temp, temp, r_shift);            // shift to [-r_shift, r_range - r_shift)
 
-  mpz_t shift;
-  mpz_init2(shift, sec->rho+1);
-  mpz_setbit(shift, sec->rho); // 2^(rho)
-  mpz_sub_ui(shift, shift, 1); // 2^rho - 1
-  mpz_sub(temp, temp, shift); // Now r is in range [-2^rho + 1, 2^rho)
-  mpz_clear(shift);
+  mpz_add(result, result, temp);           // result: p*q + r
 
-  mpz_add(result, result, temp); // p*q + r
   mpz_clear(temp);
+  mpz_clear(q_range);
+  mpz_clear(r_range);
+  mpz_clear(r_shift);
 }
 
 /* ENCRYPTION */

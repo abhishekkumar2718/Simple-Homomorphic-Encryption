@@ -32,8 +32,6 @@ class FullyHomomorphic {
   // Generate private key (also called s-vector).
   PrivateKey generate_private_key();
 
-  // TODO: Refactor
-  void choose_random_d(mpz_t result, const SomewhatPrivateKey p);
 
   // Generate y-vector for the public key.
   //
@@ -52,9 +50,12 @@ class FullyHomomorphic {
   // y-vector.
   void generate_x_p(mpz_t x_p);
 
+  // Assigns an integer result = p*q + r where p is the somewhatPrivateKey,
+  // q belongs to [0, 2^gamma/p) and r belongs to [-2^rho + 1, 2^rho).
+  void choose_random_d(mpz_t result, const SomewhatPrivateKey p);
+
   void store_cipher_bit(FILE* stream, CipherBit &c);
 
-  // TODO: Why both a RNG and a random state?
   // Seed the CryptoPP RNG using system time and srand()
   void seed_rng();
 
