@@ -174,9 +174,71 @@ SomewhatPublicKey FullyHomomorphic::generate_additional_somewhat_public_key(cons
   return key;
 }
 
+// Generate y-vector for the public key.
+//
+// y-vector is a set of big-theta rational numbers in [0, 2) with
+// kappa bits of precision such that there is a sparse subset of
+// y-vector of size theta such that sum of subset is approximately
+// equal to (1/p mod 2).
+//
+// theta: sec->private_key_length
+// big-theta: sec->private_key_y_vector_length
+//
+// NOTE: instead of using rational numbers between [0, 2) and deal with
+// precision issues, we are using integers between [0, 2^kappa) and dividing
+// before use.
 mpz_t_arr FullyHomomorphic::generate_y_vector(const PrivateKey &sk) {
-  // TODO: What's x_p?
-  mpz_t x_p, remainder, half_ssk;
+  auto y_vector_length = sec->public_key_y_vector_length;
+
+  mpz_t x_p, sum, mod;
+  mpz_t_arr y_vector = new __mpz_struct* [y_vector_length];
+
+  mpz_init(sum);
+
+  mpz_init2(mod, sec->kappa + 2);
+  mpz_setbit(mod, sec->kappa + 1); // mod: 2^kappa + 1
+
+  // x_p is the closest integer to 2^kappa/ssk
+  generate_x_p(x_p);
+
+  for (unsigned int i = 0; i < y_vector_length; i++) {
+	y_vector[i] = new mpz_t;
+	mpz_init(y_vector[i]);
+	mpz_urandomb(y_vector[i], rand_state, sec->kappa); // y_vector[i]: [0, 2^kappa)
+  }
+
+  // Replace one of the elements in the y-vector with 2^kappa/ssk - (S mod 2^(kappa + 1))
+  // where S is the sum of the theta element subset of y-vector to serve as an hint
+  // for "post-processing" circuits.
+  unsigned int rand_val = rng.GenerateWord32(0, sec->private_key_length - 1);
+  auto secret_key_idx = sk[rand_val];
+
+  for (unsigned int i = 0; i < sec->private_key_length; i++) {
+    if (sk[i] != secret_key_idx)
+      mpz_add(sum, sum, y_vector[sk[i]]);
+  }
+
+  // sum: sum % 2^(kappa + 1)
+  mpz_mod(sum, sum, mod);
+
+  // y_vector[secret_key_idx]: x_p - (sum % 2^(kappa + 1))
+  if (mpz_cmp(x_p, sum) > 0) {
+    mpz_sub(y_vector[secret_key_idx], x_p, sum);
+  } else {
+    mpz_sub(y_vector[secret_key_idx], x_p, sum);
+    mpz_add(y_vector[secret_key_idx], y_vector[secret_key_idx], mod);
+  }
+
+  mpz_clear(x_p);
+  mpz_clear(sum);
+  mpz_clear(mod);
+
+  return y_vector;
+}
+
+// x_p is the closest integer to 2^kappa/ssk
+void FullyHomomorphic::generate_x_p(mpz_t x_p) {
+  mpz_t remainder, half_ssk;
 
   mpz_init(x_p);
   mpz_init(remainder);
@@ -186,52 +248,13 @@ mpz_t_arr FullyHomomorphic::generate_y_vector(const PrivateKey &sk) {
   mpz_fdiv_qr(x_p, remainder, x_p, ssk); // x_p: 2^kappa/ssk, remainder: (2^kappa % ssk)
   mpz_fdiv_q_2exp(half_ssk, ssk, 1);     // half_ssk: ssk/2
 
-  // TODO: What does this check represent?
+  // If the remainder is larger than half of ssk, round x_p to the
+  // next integer
   if (mpz_cmp(remainder, half_ssk) < 0)
 	mpz_add_ui(x_p, x_p, 1);
 
-  mpz_t_arr u_vector = new __mpz_struct* [sec->public_key_y_vector_length];
-  generate_u_vector(u_vector, x_p, sk);
-
-  mpz_clear(x_p);
   mpz_clear(remainder);
   mpz_clear(half_ssk);
-
-  return u_vector;
-}
-
-void FullyHomomorphic::generate_u_vector(mpz_t_arr result, mpz_t x_p, unsigned int* S) {
-  mpz_t sum_u_in_s;
-  mpz_init(sum_u_in_s);
-
-  unsigned int final_s = rng.GenerateWord32(0, sec->private_key_length-1);
-  for (unsigned int i = 0; i < sec->public_key_y_vector_length; i++) {
-	result[i] = new mpz_t;
-	mpz_init(result[i]);
-	mpz_urandomb(result[i], rand_state, sec->kappa);
-  }
-
-  // Sum up all but the last u_i where i is in S
-  for (unsigned int i = 0; i < sec->private_key_length; i++) {
-	if (i == final_s)
-	  continue;
-	mpz_add(sum_u_in_s, sum_u_in_s, result[S[i]]);
-  }
-
-  mpz_t modulus;
-  mpz_init2(modulus, sec->kappa+2);
-  mpz_setbit(modulus, sec->kappa+1);
-
-  mpz_mod(sum_u_in_s, sum_u_in_s, modulus); // Should replace this with a bitmask if it's faster...
-  if (mpz_cmp(x_p, sum_u_in_s) > 0) {
-	mpz_sub(result[S[final_s]], x_p, sum_u_in_s);
-  } else {
-	mpz_sub(result[S[final_s]], x_p, sum_u_in_s);
-	mpz_add(result[S[final_s]], result[S[final_s]], modulus);
-  }
-
-  mpz_clear(sum_u_in_s);
-  mpz_clear(modulus);
 }
 
 void FullyHomomorphic::choose_random_d(mpz_t result, const SomewhatPrivateKey p) {

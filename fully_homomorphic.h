@@ -20,25 +20,37 @@ class FullyHomomorphic {
   gmp_randstate_t rand_state;
   CryptoPP::RandomPool rng;
 
-  // Generate the somewhat private key
+  // Generate the somewhat private key.
   void generate_somewhat_private_key(SomewhatPrivateKey ssk);
 
-  // Generate the somewhat public key
+  // Generate the somewhat public key.
   SomewhatPublicKey generate_somewhat_public_key(const SomewhatPrivateKey &sk);
 
-  // Generate the additional somewhat public key
+  // Generate the additional somewhat public key.
   SomewhatPublicKey generate_additional_somewhat_public_key(const SomewhatPrivateKey &sk);
 
-  // Generate private key (also called S-vector)
+  // Generate private key (also called s-vector).
   PrivateKey generate_private_key();
 
   // TODO: Refactor
   void choose_random_d(mpz_t result, const SomewhatPrivateKey p);
 
-  // Generate Y-vector for the public key
+  // Generate y-vector for the public key.
+  //
+  // y-vector is a set of big-theta rational numbers in [0, 2) with
+  // kappa bits of precision such that there is a sparse subset of
+  // y-vector of size theta such that sum of subset is approximately
+  // equal to (1/p mod 2).
+  //
+  // The y-vector acts as a hint about the secret key and this extra
+  // information is used to "post process" the ciphertext, making it more
+  // efficiently decryptable than the original ciphertext and the
+  // bootstrapping of fully homomorphic encryption circuits possible.
   mpz_t_arr generate_y_vector(const PrivateKey &sk);
 
-  void generate_u_vector(mpz_t_arr result, mpz_t x_p, unsigned int* S);
+  // x_p is the closest integer to 2^kappa/ssk. Used in generating
+  // y-vector.
+  void generate_x_p(mpz_t x_p);
 
   void store_cipher_bit(FILE* stream, CipherBit &c);
 
