@@ -52,18 +52,20 @@ void FullyHomomorphic::generate_somewhat_private_key(SomewhatPrivateKey key) {
   mpz_clear(temp);
 }
 
-// Generate private key, which consists of theta integers between [0, tau)
+// Generate private key, which consists of tau unique integers between [0, theta)
 //
 // tau: sec->private_key_length
 // theta: sec->public_key_y_vector_length
 PrivateKey FullyHomomorphic::generate_private_key() {
   auto key_length = sec->private_key_length;
+  auto key_range = sec->public_key_y_vector_length - 1;
+
   PrivateKey key = new unsigned int[key_length];
 
   std::set<unsigned int> generated_keys;
 
   while (generated_keys.size() < key_length) {
-    auto word = rng.GenerateWord32(0, sec->public_key_y_vector_length - 1);
+    auto word = rng.GenerateWord32(0, key_range);
 
     if (generated_keys.find(word) == generated_keys.end()) {
       key[generated_keys.size()] = word;
@@ -74,6 +76,7 @@ PrivateKey FullyHomomorphic::generate_private_key() {
   return key;
 }
 
+// TODO: What is somewhat public key?
 SomewhatPublicKey FullyHomomorphic::generate_somewhat_public_key(const SomewhatPrivateKey &sk) {
   auto key_length = sec->public_key_old_key_length;
   SomewhatPublicKey key = new __mpz_struct* [key_length];
@@ -121,6 +124,9 @@ SomewhatPublicKey FullyHomomorphic::generate_somewhat_public_key(const SomewhatP
   exit(1);
 }
 
+// Generates gamma + 1 random integers of the form 2*(p*q[i] + r[i])
+// where p is the secret key, q lies in [2^(gamma + i - 1)/p, 2^(gamma + i)/p)
+// and r lies in [-2^rho - 1, 2^rho + 2)
 SomewhatPublicKey FullyHomomorphic::generate_additional_somewhat_public_key(const SomewhatPrivateKey &sk) {
   auto key_length = sec->gamma + 1;
   SomewhatPublicKey key = new __mpz_struct*[key_length];
@@ -128,41 +134,39 @@ SomewhatPublicKey FullyHomomorphic::generate_additional_somewhat_public_key(cons
   // Initialize range for q's
   mpz_t q_range;
   mpz_init2(q_range, sec->gamma);
-  mpz_setbit(q_range, sec->gamma-1); // 2^(gamma+0-1)
-  mpz_cdiv_q(q_range, q_range, sk); // (2^(gamma+0-1))/p
+  mpz_setbit(q_range, sec->gamma-1); // q_range: 2^(gamma - 1)
+  mpz_cdiv_q(q_range, q_range, sk);  // q_range: 2^(gamma - 1)/p
 
   // Initialize range for r's
   mpz_t r_range;
   mpz_init2(r_range, sec->rho+2);
-  mpz_setbit(r_range, sec->rho+1); // 2^(rho+1)
-  mpz_add_ui(r_range, r_range, 1); // 2^(rho+1) + 1
+  mpz_setbit(r_range, sec->rho+1);   // r_range: 2^(rho + 1)
+  mpz_add_ui(r_range, r_range, 1);   // r_range: 2^(rho + 1) + 1
 
   // Initialize offset for r's
   mpz_t r_shift;
   mpz_init2(r_shift, sec->rho+1);
-  mpz_setbit(r_shift, sec->rho); // 2^(rho)
-  mpz_sub_ui(r_shift, r_shift, 1); // 2^rho - 1
+  mpz_setbit(r_shift, sec->rho);     // r_shift: 2^rho
+  mpz_sub_ui(r_shift, r_shift, 1);   // r_shift: 2^rho - 1
 
   mpz_t temp;
   mpz_init(temp);
-  for (unsigned long int i = 0; i < sec->gamma+1; i++) {
+  for (unsigned long int i = 0; i < key_length; i++) {
     key[i] = new mpz_t;
     mpz_init(key[i]);
 
-    mpz_urandomm(temp, rand_state, q_range); // pick a q
-    mpz_add(temp, temp, q_range); // adjust from [0,q_range] to [q_range, q_range*2]
+    mpz_urandomm(temp, rand_state, q_range); // pick a random integer between [0, q_range)
+    mpz_add(temp, temp, q_range);            // shift to [q_range, 2*q_range)
 
-    mpz_mul(key[i], sk, temp); // p*q
+    mpz_mul(key[i], sk, temp);               // key[i]: p*q
 
-    mpz_urandomm(temp, rand_state, r_range); // pick a r
+    mpz_urandomm(temp, rand_state, r_range); // pick a random integer r between [0, r_range)
+    mpz_sub(temp, temp, r_shift);            // shift to [-r_shift, r_range - r_shift)
 
-    mpz_sub(temp, temp, r_shift); // Now r is in range [-2^rho + 1, 2^rho)
+    mpz_add(key[i], key[i], temp);           // key[i]: p*q + r
+    mpz_mul_2exp(key[i], key[i], 1);         // key[i]: 2(p*q + r)
 
-    mpz_add(key[i], key[i], temp); // p*q + r
-
-    mpz_mul_2exp(key[i], key[i], 1); // 2(p*q + r)
-
-    mpz_mul_2exp(q_range, q_range, 1); // Adjust q range for next i
+    mpz_mul_2exp(q_range, q_range, 1);       // q_range: 2*q_range
   }
 
   mpz_clear(temp);
@@ -171,19 +175,20 @@ SomewhatPublicKey FullyHomomorphic::generate_additional_somewhat_public_key(cons
 }
 
 mpz_t_arr FullyHomomorphic::generate_y_vector(const PrivateKey &sk) {
+  // TODO: What's x_p?
   mpz_t x_p, remainder, half_ssk;
 
   mpz_init(x_p);
   mpz_init(remainder);
   mpz_init(half_ssk);
 
-  mpz_setbit(x_p, sec->kappa); // x_p: 2^kappa
+  mpz_setbit(x_p, sec->kappa);           // x_p: 2^kappa
+  mpz_fdiv_qr(x_p, remainder, x_p, ssk); // x_p: 2^kappa/ssk, remainder: (2^kappa % ssk)
+  mpz_fdiv_q_2exp(half_ssk, ssk, 1);     // half_ssk: ssk/2
 
-  mpz_fdiv_qr(x_p, remainder, x_p, ssk);
-
-  mpz_fdiv_q_2exp(half_ssk, ssk, 1);
+  // TODO: What does this check represent?
   if (mpz_cmp(remainder, half_ssk) < 0)
-	mpz_add_ui(x_p, x_p, 1); // fix "rounding" to round up
+	mpz_add_ui(x_p, x_p, 1);
 
   mpz_t_arr u_vector = new __mpz_struct* [sec->public_key_y_vector_length];
   generate_u_vector(u_vector, x_p, sk);
