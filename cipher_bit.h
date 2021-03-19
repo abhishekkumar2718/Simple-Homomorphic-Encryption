@@ -1,6 +1,7 @@
 #ifndef CIPHER_BIT_H
 #define CIPHER_BIT_H
 
+#include <iostream>
 #include <gmp.h>
 #include "type_defs.h"
 #include "security_settings.h"
@@ -20,7 +21,7 @@ class CipherBit {
 
     const bool greater_than_base_2(const unsigned long int size);
 
-    friend ostream& operator<<(ostream &os, const CipherBit &cipher_bit);
+    friend std::ostream& operator<<(std::ostream &os, const CipherBit &cipher_bit);
 
     ~CipherBit() {
       mpz_clear(old_ciphertext);

@@ -35,8 +35,6 @@ void FullyHomomorphic::seed_random_state(void *source, size_t n_bytes) {
 }
 
 void FullyHomomorphic::generate_key_pair(PrivateKey &sk, PublicKey &pk) {
-  cout << "--- Generating Key Pair ---" << endl;
-
   generate_somewhat_private_key(ssk);
 
   sk = generate_private_key();
@@ -140,8 +138,8 @@ SomewhatPublicKey FullyHomomorphic::generate_somewhat_public_key(const SomewhatP
   }
 
   delete[] key;
-  cout << "Could not generate a somewhat public key!" << endl;
-  cout << "Try with a different seed!" << endl;
+  std::cout << "Could not generate a somewhat public key!" << std::endl;
+  std::cout << "Try with a different seed!" << std::endl;
   exit(1);
 }
 

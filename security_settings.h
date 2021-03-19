@@ -4,8 +4,6 @@
 #include <iostream>
 #include <cmath>
 
-using namespace std;
-
 class SecuritySettings {
  private:
   unsigned long int lambda;
@@ -25,7 +23,7 @@ class SecuritySettings {
 
   SecuritySettings(unsigned long int lambda);
 
-  friend ostream& operator<<(ostream &os, const SecuritySettings &sec);
+  friend std::ostream& operator<<(std::ostream &os, const SecuritySettings &sec);
 };
 
 #endif //SECURITY_SETTINGS_H

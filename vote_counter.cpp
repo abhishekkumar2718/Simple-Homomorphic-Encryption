@@ -51,7 +51,7 @@ VoteCounter::VoteCounter(unsigned int num_candidates) : num_votes(0), num_candid
   fh = new FullyHomomorphic(sec);
   fh->generate_key_pair(sk, pk);
 
-  cout << *sec << endl;
+  std::cout << *sec << std::endl;
 }
 
 void VoteCounter::get_votes() {

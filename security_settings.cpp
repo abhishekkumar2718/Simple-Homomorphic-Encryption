@@ -15,16 +15,16 @@ SecuritySettings::SecuritySettings(unsigned long int lambda) : lambda(lambda) {
   public_key_y_vector_length = big_theta;
 }
 
-ostream& operator<<(ostream& os, const SecuritySettings& security) {
-  os << "--- Security Parameters ---" << endl;
-  os << "Bit-length of integers in public key (gamma): " << security.gamma << endl;
-  os << "Bit-length of secret key (eta): " << security.eta << endl;
-  os << "Bit-length of noise (rho): " << security.rho << endl;
-  os << "Bit-length of secondary noise parameter (rho'): " << security.rho_ << endl;
-  os << "Number of integers in public key (tau): " << security.tau << endl;
-  os << "Bits of precision of indicator (kappa): " << security.kappa << endl;
-  os << "Private key length (theta): " << security.theta << endl;
-  os << "Public Key Indicator Vector Length (big-theta): " << security.big_theta << endl;
+std::ostream& operator<<(std::ostream& os, const SecuritySettings& security) {
+  os << "--- Security Parameters ---" << std::endl;
+  os << "Bit-length of integers in public key (gamma): " << security.gamma << std::endl;
+  os << "Bit-length of secret key (eta): " << security.eta << std::endl;
+  os << "Bit-length of noise (rho): " << security.rho << std::endl;
+  os << "Bit-length of secondary noise parameter (rho'): " << security.rho_ << std::endl;
+  os << "Number of integers in public key (tau): " << security.tau << std::endl;
+  os << "Bits of precision of indicator (kappa): " << security.kappa << std::endl;
+  os << "Private key length (theta): " << security.theta << std::endl;
+  os << "Public Key Indicator Vector Length (big-theta): " << security.big_theta << std::endl;
 
   return os;
 }
