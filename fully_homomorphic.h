@@ -115,10 +115,6 @@ class FullyHomomorphic {
 
   // Evaluate the expression represented by the circuit.
   CipherBit** evaluate(std::vector<Gate*> output_gates, CipherBit** inputs, const PublicKey &pk);
-
-  std::vector<Gate*> create_decryption_cicuit();
-  Gate*** create_3_for_2_circuit(Gate** a, Gate** b, Gate** c, unsigned int n);
-  void test_decryption_circuit(const PublicKey &pk, const PrivateKey &sk);
 };
 
 #endif //FULLY_HOMOMORPHIC_H
