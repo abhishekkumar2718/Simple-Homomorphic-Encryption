@@ -431,29 +431,35 @@ bool* FullyHomomorphic::decrypt_bit_vector(const PrivateKey &sk, CipherBit** c_v
   return m_vector;
 }
 
-bool FullyHomomorphic::is_allowed_circuit(std::vector<Gate*> output_gates) {
-  // d <= (e - 4 - (log fnorm)) / (r + 2)
+// Returns whether the circuit is valid.
+//
+// As each computation of homomorphic encryption adds more noise, after
+// certain number of operations it is no longer possible to decrypt the
+// ciphertext correctly.
+//
+// A circuit is valid if for the equivalent polynomial f, the following
+// condition is true:
+//
+//                 d <= (eta - 4 - log2(|f|))/(rho' + 2)
+//
+// where d is the degree of polynomial, |f| is the l-1 norm of the
+// coefficient vector of f and eta, rho' are security parameters.
+const bool FullyHomomorphic::is_valid(const std::vector<Gate*> &output_gates) {
+  unsigned long int d = 0;
+  unsigned long int norm = 0;
 
-  unsigned long int max_degree = 0;
-  unsigned long int max_norm = 0;
-  for (std::vector<Gate*>::iterator i = output_gates.begin(); i != output_gates.end(); i++) {
-	if ((*i)->degree > max_degree) {
-	  max_degree = (*i)->degree;
-	  max_norm = (*i)->norm;
-	}
-	//if ((*i)->degree > (sec->eta - 4 - log2((*i)->norm)) / (sec->rho_+2))
-	//return false;
+  for (const auto &output_gate: output_gates) {
+    if (output_gate->degree > d) {
+      d = output_gate->degree;
+      norm = output_gate->norm;
+    }
   }
-  //  printf("Max Degree = %lu, Max Norm = %lu\n", max_degree, max_norm);
-  //  printf("Log2 Max Norm = %f\n", log2(max_norm));
-  printf("max degree: %lu, max norm: %lu\n", max_degree, max_norm);
-  if (max_degree > (sec->eta - 4 - log2(max_norm)) / (sec->rho_+2))
-	return false;
-  return true;
+
+  return d <= (sec->eta - 4 - log2(norm)) / (sec->rho_ + 2);
 }
 
 CipherBit** FullyHomomorphic::evaluate(std::vector<Gate*> output_gates, CipherBit** inputs, const PublicKey &pk) {
-  if (!is_allowed_circuit(output_gates)) {
+  if (!is_valid(output_gates)) {
 	printf("Circuit is not allowed! Giving up!\n");
 	exit(1);
   }
@@ -499,7 +505,7 @@ void FullyHomomorphic::test_decryption_circuit(const PublicKey &pk, const Privat
 
 
   std::vector<Gate*> output_gates = create_decryption_cicuit();
-  if (is_allowed_circuit(output_gates)) {
+  if (is_valid(output_gates)) {
 	printf("Allowed circuit\n");
   } else {
 	printf("NOT ALLOWED CIRCUIT!!\n");

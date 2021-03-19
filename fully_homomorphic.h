@@ -77,7 +77,24 @@ class FullyHomomorphic {
   // X[i] are the public key integers and sum is summation of X[i]
   // where i belongs to set S.
   void generate_ciphertext(mpz_t ciphertext, const PublicKey &pk, const bool value);
+
+  // Returns whether the circuit is valid.
+  //
+  // As each computation of homomorphic encryption adds more noise, after
+  // certain number of operations it is no longer possible to decrypt the
+  // ciphertext correctly.
+  //
+  // A circuit is valid if for the equivalent polynomial f, the following
+  // condition is true:
+  //
+  //                 d <= (eta - 4 - log2(|f|))/(rho' + 2)
+  //
+  // where d is the degree of polynomial, |f| is the l-1 norm of the
+  // coefficient vector of f and eta, rho' are security parameters
+  const bool is_valid(const std::vector<Gate*> &output_gates);
  public:
+  mpz_t ssk;
+
   FullyHomomorphic(SecuritySettings *security_settings);
 
   // Generate private, public key pair and assign to
@@ -102,10 +119,6 @@ class FullyHomomorphic {
   std::vector<Gate*> create_decryption_cicuit();
   Gate*** create_3_for_2_circuit(Gate** a, Gate** b, Gate** c, unsigned int n);
   void test_decryption_circuit(const PublicKey &pk, const PrivateKey &sk);
-
-  bool is_allowed_circuit(std::vector<Gate*> output_gates);
-
-  mpz_t ssk;
 };
 
 #endif //FULLY_HOMOMORPHIC_H
