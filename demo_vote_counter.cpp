@@ -1,9 +1,5 @@
 #include "demo_vote_counter.h"
 
-void print_help() {
-  printf("Takes one parameter, the number of candidates in the election\n");
-}
-
 bool DemoVoteCounter::verify_vote(unsigned int vote_id) {
   Gate* input_zero = new Gate(InputLiteral, false, sec);
   Gate* input_one = new Gate(InputLiteral, true, sec);
@@ -37,16 +33,14 @@ bool DemoVoteCounter::verify_vote(unsigned int vote_id) {
   }
 
   CipherBit** encrypted_results = fh->evaluate(output_gates, votes, pk);
-  bool* decrypted_results = fh->decrypt_bit_vector(sk, encrypted_results, w_length+1);
+
+  auto decrypted_bits = fh->decrypt_bit_vector(sk, encrypted_results, w_length + 1);
 
   for (unsigned int i = 0; i < w_length; i++) {
-	if (decrypted_results[i]) {
-	  printf("%u\n", decrypted_results[i]);
-	  return false;
-	}
+    if (decrypted_bits[i]) return false;
   }
-	
-  return decrypted_results[w_length];
+
+  return true;
 }
 
 DemoVoteCounter::DemoVoteCounter(unsigned int num_candidates) : num_candidates(num_candidates) {
@@ -90,18 +84,20 @@ void DemoVoteCounter::get_votes() {
 }
 
 void DemoVoteCounter::verify_votes() {
-  printf("Verifying votes\n");
+  std::cout << "--- Verifying Votes ---" << std::endl;
+
   bool failed = false;
   for (unsigned int i = 0; i < num_votes; i++) {
-	if (!verify_vote(i)) {
-	  printf("Vote %u failed to verify!\n", i+1);
-	  failed = true;
-	}
+    if (verify_vote(i))
+      std::cout << "Vote " << i + 1 << " verified" << std::endl;
+    else {
+      std::cout << "Vote " << i + 1 << " failed to verify!" << std::endl;
+      failed = true;
+    }
   }
 
-  if (!failed) {
-	printf("All votes verified\n");
-  }
+  if (!failed)
+    std::cout << "All votes verified" << std::endl;
 }
 
 void DemoVoteCounter::count_votes() {
@@ -148,20 +144,22 @@ void DemoVoteCounter::count_votes() {
   }
 
   CipherBit** encrypted_results = fh->evaluate(output_gates, votes, pk);
-  bool* decrypted_results = fh->decrypt_bit_vector(sk, encrypted_results, num_candidates*(w_length+1));
 
-  for (unsigned int candidate = 0; candidate < num_candidates; candidate++) {
-	for (unsigned int i = 0; i < w_length+1; i++) {
-	  printf("%u ", decrypted_results[candidate*(w_length+1) + i]);
-	}
-	printf("\n");
+  auto decrypted_bits = fh->decrypt_bit_vector(sk, encrypted_results, num_candidates*(w_length  + 1));
+
+  for (unsigned int c = 0; c < num_candidates; c++) {
+    auto base = c * (w_length + 1);
+
+    for (unsigned int i = 0; i < w_length + 1; i++)
+      std::cout << decrypted_bits[base + i] << " ";
+    std::cout << std::endl;
   }
 }
 
 int main(int argc, char** argv) {
   if (argc != 2) {
-	print_help();
-	exit(1);
+    std::cout << "Takes one parameter, the number of candidates in the election" << std:: endl;
+    exit(1);
   }
 
   unsigned int num_candidates = atoi(argv[1]);

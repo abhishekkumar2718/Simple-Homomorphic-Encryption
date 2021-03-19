@@ -439,14 +439,13 @@ bool FullyHomomorphic::decrypt_bit(const CipherBit &c, const PrivateKey &sk) {
   return decrypted_bit;
 }
 
-bool* FullyHomomorphic::decrypt_bit_vector(const PrivateKey &sk, CipherBit** c_vector, const unsigned long int c_vector_length) {
-  bool* m_vector = new bool[c_vector_length];
-  unsigned long int m_index = 0;
-  for (unsigned long int i = 0; i < c_vector_length; i++) {
-	m_vector[m_index] = decrypt_bit(*c_vector[i], sk);
-	m_index++;
-  }
-  return m_vector;
+std::vector<bool> FullyHomomorphic::decrypt_bit_vector(const PrivateKey &sk, CipherBit** c_vector, const unsigned long int c_vector_length) {
+  std::vector<bool> M(c_vector_length);
+
+  for (unsigned long int i = 0; i < c_vector_length; i++)
+    M[i] = decrypt_bit(*c_vector[i], sk);
+
+  return M;
 }
 
 // Returns whether the circuit is valid.
