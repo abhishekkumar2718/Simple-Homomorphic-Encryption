@@ -458,43 +458,50 @@ const bool FullyHomomorphic::is_valid(const std::vector<Gate*> &output_gates) {
   return d <= (sec->eta - 4 - log2(norm)) / (sec->rho_ + 2);
 }
 
+// Evaluate the expression represented by the circuit.
 CipherBit** FullyHomomorphic::evaluate(std::vector<Gate*> output_gates, CipherBit** inputs, const PublicKey &pk) {
   if (!is_valid(output_gates)) {
-	printf("Circuit is not allowed! Giving up!\n");
-	exit(1);
+    std::cout << "The circuit adds too much noise! Try again with a larger lambda" << std::endl;
+    exit(1);
   }
 
-  // TODO: Make sure that the function will be calculated properly
   std::stack<Gate*> evaluation_stack;
-  for (std::vector<Gate*>::reverse_iterator i = output_gates.rbegin(); i != output_gates.rend(); i++) {
-	evaluation_stack.push((Gate*)*i);
-  }
+  for (auto i = output_gates.rbegin(); i != output_gates.rend(); i++)
+    evaluation_stack.push((Gate*)*i);
 
   CipherBit** output_vector = new CipherBit*[output_gates.size()];
   unsigned long int output_index = 0;
 
   while (!evaluation_stack.empty()) {
-	Gate* cur_gate = evaluation_stack.top();
+    Gate* cur_gate = evaluation_stack.top();
 
-	if (!cur_gate->input1_resolved) {
-	  evaluation_stack.push(cur_gate->input1);
-	}
-	if (!cur_gate->input2_resolved) {
-	  evaluation_stack.push(cur_gate->input2);
-	}
+    // If either of inputs to the current gate are not resolved,
+    // push them to stack and evaluate them.
+    if (!cur_gate->input1_resolved)
+      evaluation_stack.push(cur_gate->input1);
 
-	if (cur_gate->input1_resolved && cur_gate->input2_resolved) {
-	  if (cur_gate->is_input())
-		cur_gate->forward_ciphertext(inputs);
+    if (!cur_gate->input2_resolved)
+      evaluation_stack.push(cur_gate->input2);
 
-	  cur_gate->evaluate(pk);
-	  evaluation_stack.pop();
+    if (cur_gate->input1_resolved && cur_gate->input2_resolved) {
+      // If the current is an input gate, forward the ciphertext to
+      // all outputs. 
+      if (cur_gate->is_input())
+        cur_gate->forward_ciphertext(inputs);
 
-	  if (cur_gate->gate_type == Output) {
-		output_vector[output_index] = cur_gate->output_cipher_bits;
-		output_index++;
-	  }
-	}
+      // Evaluate the current gate and resolve inputs for the next
+      // layer.
+      cur_gate->evaluate(pk);
+
+      evaluation_stack.pop();
+
+      // If it is an output gate, store the cipherbit in the output
+      // vector.
+      if (cur_gate->gate_type == Output) {
+        output_vector[output_index] = cur_gate->output_cipher_bits;
+        output_index++;
+      }
+    }
   }
 
   return output_vector;
