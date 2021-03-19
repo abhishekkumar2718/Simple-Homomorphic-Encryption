@@ -758,10 +758,6 @@ Gate*** FullyHomomorphic::create_3_for_2_circuit(Gate** a, Gate** b, Gate** c, u
   return output;
 }
 
-void FullyHomomorphic::store_cipher_bit(FILE* stream, CipherBit &c) {
-  mpz_out_raw(stream, c.old_ciphertext);
-}
-
 void FullyHomomorphic::seed_rng() {
   srand(time(NULL));
 

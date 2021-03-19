@@ -62,8 +62,6 @@ class FullyHomomorphic {
   // Used to construct the somewhat public key.
   void choose_random_d(mpz_t result, const SomewhatPrivateKey p);
 
-  void store_cipher_bit(FILE* stream, CipherBit &c);
-
   // Seed the CryptoPP RNG using system time and srand().
   void seed_rng();
 
