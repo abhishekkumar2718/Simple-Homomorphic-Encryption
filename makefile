@@ -2,17 +2,11 @@ CC=g++
 CFLAGS=-c -Wall -g -m64
 LDFLAGS=-lgmpxx -lgmp -Wl,-Bdynamic -lcryptopp -lpthread
 EXECUTABLE=fully_homomorphic
-DEMO_EXECUTABLE=demo_fully_homomorphic
 
 all : $(EXECUTABLE)
 
-demo : $(DEMO_EXECUTABLE)
-
-$(DEMO_EXECUTABLE) : vote_counter.o fully_homomorphic.o utilities.o circuit.o security_settings.o
-	$(CC) -o $@ vote_counter.o fully_homomorphic.o utilities.o circuit.o cipher_bit.o security_settings.o $(LDFLAGS)
-
-$(EXECUTABLE) : main.o fully_homomorphic.o utilities.o circuit.o security_settings.o
-	$(CC) -o $@ main.o fully_homomorphic.o utilities.o circuit.o cipher_bit.o security_settings.o $(LDFLAGS)
+$(EXECUTABLE) : main.o vote_counter.o fully_homomorphic.o utilities.o circuit.o security_settings.o
+	$(CC) -o $@ main.o vote_counter.o fully_homomorphic.o utilities.o circuit.o cipher_bit.o security_settings.o $(LDFLAGS)
 
 vote_counter.o : vote_counter.cpp
 	$(CC) $(CFLAGS) vote_counter.cpp
@@ -36,4 +30,4 @@ security_settings.o : security_settings.cpp
 	$(CC) $(CFLAGS) security_settings.cpp
 
 clean :
-	rm -rf *.o fully_homomorphic demo_fully_homomorphic
+	rm -rf *.o fully_homomorphic

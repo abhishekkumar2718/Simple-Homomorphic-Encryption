@@ -1,13 +1,18 @@
-#include "fully_homomorphic.h"
+#include "vote_counter.h"
+#include <iostream>
 
 int main(int argc, char** argv) {
-  CryptoPP::AutoSeededRandomPool rng;
-  SecuritySettings *security_settings = new SecuritySettings(5);
-  FullyHomomorphic fh(security_settings);
-  PrivateKey sk;
-  PublicKey pk;
+  if (argc != 2) {
+    std::cout << "Takes one parameter, the number of candidates in the election" << std::endl;
+    exit(1);
+  }
 
-  cout << *security_settings << endl;
+  unsigned int num_candidates = atoi(argv[1]);
 
-  fh.generate_key_pair(sk, pk);
+  VoteCounter vote_counter(num_candidates);
+  vote_counter.get_votes();
+  vote_counter.verify_votes();
+  vote_counter.count_votes();
+
+  return 0;
 }
