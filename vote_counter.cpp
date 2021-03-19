@@ -1,6 +1,6 @@
-#include "demo_vote_counter.h"
+#include "vote_counter.h"
 
-bool DemoVoteCounter::verify_vote(unsigned int vote_id) {
+bool VoteCounter::verify_vote(unsigned int vote_id) {
   unsigned long int w_length = log2(num_candidates);
   unsigned long int p_length = pow(2, w_length);
 
@@ -45,7 +45,7 @@ bool DemoVoteCounter::verify_vote(unsigned int vote_id) {
   return true;
 }
 
-DemoVoteCounter::DemoVoteCounter(unsigned int num_candidates) : num_votes(0), num_candidates(num_candidates) {
+VoteCounter::VoteCounter(unsigned int num_candidates) : num_votes(0), num_candidates(num_candidates) {
   sec = new SecuritySettings(4); // lambda: 4
 
   fh = new FullyHomomorphic(sec);
@@ -54,7 +54,7 @@ DemoVoteCounter::DemoVoteCounter(unsigned int num_candidates) : num_votes(0), nu
   cout << *sec << endl;
 }
 
-void DemoVoteCounter::get_votes() {
+void VoteCounter::get_votes() {
   std::vector<CipherBit*> encrypted_votes;
 
   while (true) {
@@ -86,7 +86,7 @@ void DemoVoteCounter::get_votes() {
     votes[i] = encrypted_votes[i];
 }
 
-void DemoVoteCounter::verify_votes() {
+void VoteCounter::verify_votes() {
   std::cout << "--- Verifying Votes ---" << std::endl;
 
   bool failed = false;
@@ -103,7 +103,7 @@ void DemoVoteCounter::verify_votes() {
     std::cout << "All votes verified" << std::endl;
 }
 
-void DemoVoteCounter::count_votes() {
+void VoteCounter::count_votes() {
   printf("Counting votes\n");
   Gate* input_zero = new Gate(InputLiteral, false, sec);
   Gate* input_one = new Gate(InputLiteral, true, sec);
@@ -167,9 +167,10 @@ int main(int argc, char** argv) {
 
   unsigned int num_candidates = atoi(argv[1]);
 
-  DemoVoteCounter demo(num_candidates);
-  demo.get_votes();
-  demo.verify_votes();
-  demo.count_votes();
+  VoteCounter vote_counter(num_candidates);
+  vote_counter.get_votes();
+  vote_counter.verify_votes();
+  vote_counter.count_votes();
 
+  return 0;
 }
