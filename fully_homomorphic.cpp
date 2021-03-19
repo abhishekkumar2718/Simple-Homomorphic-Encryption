@@ -293,78 +293,81 @@ void FullyHomomorphic::choose_random_d(mpz_t result, const SomewhatPrivateKey p)
   mpz_clear(r_shift);
 }
 
-/* ENCRYPTION */
-void FullyHomomorphic::old_encrypt_bit(mpz_t result, const PublicKey &pk, const bool m) {
+// Encrypt a bit by generating ciphertext (described below) and the z-vector by
+// setting z[i] = ciphertext * y[i], keeping only ceil(log2(theta)) + 3 bits of precision.
+void FullyHomomorphic::encrypt_bit(CipherBit &result, const PublicKey &pk, const bool value) {
+  unsigned int cnt = ceil(log2(sec->theta)) + 3;
+  unsigned int z_vector_length = sec->public_key_y_vector_length;
+  unsigned long bitmask = (1l << (cnt + 1)) - 1;
+
+  mpz_t temp;
+
+  mpz_init(temp);
+  mpz_init(result.old_ciphertext);
+  generate_ciphertext(result.old_ciphertext, pk, value);
+
+  result.z_vector = new unsigned long [z_vector_length];
+
+  // z_vector[i]: the least significant 'cnt' bits of ciphertext * y_vector[i]
+  for (unsigned int i = 0; i < z_vector_length; i++) {
+    mpz_mul(temp, result.old_ciphertext, pk.y_vector[i]); // temp: result.old_ciphertext * y_vector[i]
+    mpz_fdiv_q_2exp(temp, temp, sec->kappa - cnt);        // temp: (result.old_ciphertext * y_vector[i])/2^(kappa - precision)
+    result.z_vector[i] = mpz_get_ui(temp) & bitmask;      // z_vector[i]: temp & bitmask
+  }
+
+  mpz_clear(temp);
+}
+
+// Generate ciphertext for a bit: Choose a random subset S of {1, 2, 3, ..., tau}
+// and a random integer r in (-2^rho', 2^rho') and assign ciphertext as
+// c = (m + 2 * r + 2 * sum) % X[0], where X[i] are the public key integers and
+// sum is summation of X[i] where i belongs to set S.
+void FullyHomomorphic::generate_ciphertext(mpz_t ciphertext, const PublicKey &pk, const bool value) {
+  auto public_key_length = sec->public_key_old_key_length;
+
   mpz_t sum;
   mpz_init(sum);
 
-  CryptoPP::byte randomness = rng.GenerateByte();
-  unsigned int randomness_counter = 0; // Current bit of randomness being used
+  CryptoPP::byte randomness;
+  for (unsigned int i = 1; i < public_key_length; i++) {
+    auto counter = (i - 1) % 8;
 
-  for (unsigned int i = 1; i < sec->public_key_old_key_length; i++) {
-	if (randomness_counter == 8) {
-	  // grab more randomness
-	  randomness = rng.GenerateByte();
-	  randomness_counter = 0;
-	}
-	if ((randomness << randomness_counter) >> 7) {
-	  mpz_add(sum, sum, pk.old_key[i]);
-	}
-	randomness_counter++;
+    if (counter == 0)
+      randomness = rng.GenerateByte();
+
+    if ((randomness << counter) >> 7)
+      mpz_add(sum, sum, pk.old_key[i]);
   }
 
-  mpz_mul_2exp(sum, sum, 1); // multiply by 2
+  // sum: 2 * sum(X[i]) where i belongs to a random subset of {1, 2, ..., tau}.
+  mpz_mul_2exp(sum, sum, 1);
 
-  mpz_t r;
+  mpz_t r, upper_bound, offset;
+
   mpz_init(r);
 
-  mpz_t upper_bound;
-  mpz_init2(upper_bound, sec->rho_+2);
-  mpz_setbit(upper_bound, sec->rho_+1);
-  mpz_sub_ui(upper_bound, upper_bound, 2);
+  mpz_init2(upper_bound, sec->rho_ + 2);
+  mpz_setbit(upper_bound, sec->rho_ + 1);                 // upper_bound: 2^(rho' + 1)
+  mpz_sub_ui(upper_bound, upper_bound, 2);                // upper_bound: 2^(rho' + 1) - 2
 
-  mpz_urandomm(r, rand_state, upper_bound);
-  mpz_clear(upper_bound);
-
-  mpz_t offset;
   mpz_init2(offset, sec->rho_+1);
-  mpz_setbit(offset, sec->rho_);
-  mpz_sub_ui(offset, offset, 1);
+  mpz_setbit(offset, sec->rho_);                          // offset: 2^rho'
+  mpz_sub_ui(offset, offset, 1);                          // offset: 2^rho' - 1
 
-  mpz_sub(r, r, offset);
-  mpz_clear(offset);
-  // r should now be in the exclusive range (-2^rho', 2^rho')
+  mpz_urandomm(r, rand_state, upper_bound);               // r: [0, 2^(rho' + 1) - 2)
+  mpz_sub(r, r, offset);                                  // r: [-2^rho' - 1, 2^rho' - 1)
 
-  mpz_mul_2exp(r, r, 1); // multiply by 2
+  mpz_mul_2exp(r, r, 1);                                  // r: [-2^(rho' + 1) - 2, 2^(rho' + 1) - 2)
 
-  mpz_add_ui(result, result, m);
-  mpz_add(result, result, r);
-  mpz_add(result, result, sum);
-  mpz_correct_mod(result, result, pk.old_key[0]);
+  mpz_add_ui(ciphertext, ciphertext, value);              // ciphertext: m
+  mpz_add(ciphertext, ciphertext, r);                     // ciphertext: m + r
+  mpz_add(ciphertext, ciphertext, sum);                   // ciphertext: m + r + sum
+  mpz_correct_mod(ciphertext, ciphertext, pk.old_key[0]); // ciphertext: (m + r + sum) % X[0]
 
   mpz_clear(r);
   mpz_clear(sum);
-}
-
-void FullyHomomorphic::encrypt_bit(CipherBit &result, const PublicKey &pk, const bool m) {
-  mpz_init(result.old_ciphertext);
-  old_encrypt_bit(result.old_ciphertext, pk, m);
-
-  unsigned int precision = ceil(log2(sec->theta)) + 3;
-
-  result.z_vector = new unsigned long [sec->public_key_y_vector_length];
-
-  unsigned long bitmask = (1l << (precision+1)) - 1;
-
-  mpz_t temp;
-  mpz_init(temp);
-  // unsigned int __gmp_n;
-  for (unsigned int i = 0; i < sec->public_key_y_vector_length; i++) {
-	mpz_mul(temp, result.old_ciphertext, pk.y_vector[i]);
-	mpz_fdiv_q_2exp(temp, temp, sec->kappa-precision);
-	result.z_vector[i] = mpz_get_ui(temp) & bitmask;
-  }
-  mpz_clear(temp);
+  mpz_clear(upper_bound);
+  mpz_clear(offset);
 }
 
 /* DECRYPTION */

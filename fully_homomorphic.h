@@ -64,11 +64,19 @@ class FullyHomomorphic {
 
   void store_cipher_bit(FILE* stream, CipherBit &c);
 
-  // Seed the CryptoPP RNG using system time and srand()
+  // Seed the CryptoPP RNG using system time and srand().
   void seed_rng();
 
-  // Seed the GMP random state using entropy generated from RNG
+  // Seed the GMP random state using entropy generated from RNG.
+  // Used to generate large random integers.
   void seed_random_state(void *source, size_t n_bytes);
+
+  // Generate ciphertext for a bit: Choose a random subset S of
+  // {1, 2, 3, ..., tau} and a random integer r in (-2^rho', 2^rho')
+  // and assign ciphertext as c = (m + 2 * r + 2 * sum) % X[0], where
+  // X[i] are the public key integers and sum is summation of X[i]
+  // where i belongs to set S.
+  void generate_ciphertext(mpz_t ciphertext, const PublicKey &pk, const bool value);
  public:
   FullyHomomorphic(SecuritySettings *security_settings);
 
@@ -76,7 +84,11 @@ class FullyHomomorphic {
   // sk and pk variables
   void generate_key_pair(PrivateKey &sk, PublicKey &pk);
 
-  void encrypt_bit(CipherBit &result, const PublicKey &pk, const bool m);
+  // Encrypt a bit by generating ciphertext and z-vector by setting
+  // z[i] = ciphertext * y[i], keeping only ceil(log2(theta)) + 3 bits of
+  // precision.
+  void encrypt_bit(CipherBit &result, const PublicKey &pk, const bool value);
+
   bool decrypt_bit(const CipherBit &c, const PrivateKey &sk);
   CipherBit** encrypt_bit_vector(const PublicKey &pk, const bool* m_vector, const unsigned long int m_vector_length);
   bool* decrypt_bit_vector(const PrivateKey &sk, CipherBit** c_vector, const unsigned long int c_vector_length);
@@ -89,8 +101,6 @@ class FullyHomomorphic {
   bool is_allowed_circuit(std::vector<Gate*> output_gates);
 
   mpz_t ssk;
-
-  void old_encrypt_bit(mpz_t result, const PublicKey &pk, const bool m);
 };
 
 #endif //FULLY_HOMOMORPHIC_H
