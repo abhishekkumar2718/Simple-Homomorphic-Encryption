@@ -150,14 +150,12 @@ void DemoVoteCounter::count_votes() {
   CipherBit** encrypted_results = fh->evaluate(output_gates, votes, pk);
   bool* decrypted_results = fh->decrypt_bit_vector(sk, encrypted_results, num_candidates*(w_length+1));
 
-  textcolor(BRIGHT, RED);
   for (unsigned int candidate = 0; candidate < num_candidates; candidate++) {
 	for (unsigned int i = 0; i < w_length+1; i++) {
 	  printf("%u ", decrypted_results[candidate*(w_length+1) + i]);
 	}
 	printf("\n");
   }
-  resettextcolor();
 }
 
 int main(int argc, char** argv) {
