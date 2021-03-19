@@ -1,38 +1,40 @@
 #include "demo_vote_counter.h"
 
 bool DemoVoteCounter::verify_vote(unsigned int vote_id) {
-  Gate* input_zero = new Gate(InputLiteral, false, sec);
-  Gate* input_one = new Gate(InputLiteral, true, sec);
-
-  Gate* input;
   unsigned long int w_length = log2(num_candidates);
   unsigned long int p_length = pow(2, w_length);
-  Gate* temp_and;
-  Gate*** p = new Gate**[num_candidates+1];
-  for (unsigned long int i = 0; i < num_candidates+1; i++) { //row
-	p[i] = new Gate*[p_length+1];
-	p[i][0] = input_one;
-	if (i > 0) {
-	  input = new Gate(Input, vote_id*num_candidates + i-1, sec);
-	}
-	for (unsigned int j = 1; j < p_length+1; j++) { //col
-	  if (i == 0) {
-		p[0][j] = input_zero;
-	  } else {
-		temp_and = new Gate(And, p[i-1][j-1], input, sec);
-		p[i][j] = new Gate(Xor, temp_and, p[i-1][j], sec);
-	  }
-	}
+
+  Gate *input, *temp_and;
+
+  Gate *input_zero = new Gate(InputLiteral, false, sec);
+  Gate *input_one = new Gate(InputLiteral, true, sec);
+
+  Gate ***p = new Gate**[num_candidates + 1];
+
+  for (unsigned long int i = 0; i < num_candidates + 1; i++) { //row
+    p[i] = new Gate*[p_length + 1];
+    p[i][0] = input_one;
+
+    if (i > 0)
+      input = new Gate(Input, vote_id * num_candidates + i - 1, sec);
+
+    for (unsigned int j = 1; j < p_length+1; j++) { //col
+      if (i == 0)
+        p[0][j] = input_zero;
+      else {
+        temp_and = new Gate(And, p[i - 1][j - 1], input, sec);
+        p[i][j] = new Gate(Xor, temp_and, p[i - 1][j], sec);
+      }
+    }
   }
 
-  Gate* output;
   std::vector<Gate*> output_gates;
   for (unsigned long int i = p_length; i > 0; i >>= 1) {
-	output = new Gate(Output, p[num_candidates][i], sec);
-	output_gates.push_back(output);
+    Gate *output = new Gate(Output, p[num_candidates][i], sec);
+    output_gates.push_back(output);
   }
 
-  CipherBit** encrypted_results = fh->evaluate(output_gates, votes, pk);
+  CipherBit **encrypted_results = fh->evaluate(output_gates, votes, pk);
 
   auto decrypted_bits = fh->decrypt_bit_vector(sk, encrypted_results, w_length + 1);
 
@@ -44,10 +46,12 @@ bool DemoVoteCounter::verify_vote(unsigned int vote_id) {
 }
 
 DemoVoteCounter::DemoVoteCounter(unsigned int num_candidates) : num_candidates(num_candidates) {
-  sec = new SecuritySettings(4);
-  cout << *sec << endl;
+  sec = new SecuritySettings(4); // lambda: 4
+
   fh = new FullyHomomorphic(sec);
   fh->generate_key_pair(sk, pk);
+
+  cout << *sec << endl;
 }
 
 void DemoVoteCounter::get_votes() {
