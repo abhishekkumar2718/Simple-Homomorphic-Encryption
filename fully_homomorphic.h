@@ -89,10 +89,15 @@ class FullyHomomorphic {
   // precision.
   void encrypt_bit(CipherBit &result, const PublicKey &pk, const bool value);
 
+  // Decrypt ciphertext, producing a bit as follows: For each element i in the
+  // private key, subtract z_vector[i] from the ciphertext and return
+  // the resultant mod 2.
   bool decrypt_bit(const CipherBit &c, const PrivateKey &sk);
+
+  // TODO: Refactor along with demo_vote_counter
   CipherBit** encrypt_bit_vector(const PublicKey &pk, const bool* m_vector, const unsigned long int m_vector_length);
   bool* decrypt_bit_vector(const PrivateKey &sk, CipherBit** c_vector, const unsigned long int c_vector_length);
-  //std::vector<CipherBit> evaluate(CircuitNode *circuit, std::vector<CipherBit> inputs);
+
   CipherBit** evaluate(std::vector<Gate*> output_gates, CipherBit** inputs, const PublicKey &pk);
   std::vector<Gate*> create_decryption_cicuit();
   Gate*** create_3_for_2_circuit(Gate** a, Gate** b, Gate** c, unsigned int n);

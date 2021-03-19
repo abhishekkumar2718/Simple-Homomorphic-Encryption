@@ -370,59 +370,6 @@ void FullyHomomorphic::generate_ciphertext(mpz_t ciphertext, const PublicKey &pk
   mpz_clear(offset);
 }
 
-/* DECRYPTION */
-bool FullyHomomorphic::decrypt_bit(const CipherBit &c, const PrivateKey &sk) {
-  mpz_t sum;
-  mpz_init(sum);
-
-  for (unsigned int i = 0; i < sec->private_key_length; i++) {
-	mpz_add_ui(sum, sum, c.z_vector[sk[i]]);
-  }
-
-  mpz_t rounded_sum;
-  mpz_init(rounded_sum);
-  mpz_t remainder;
-  mpz_init(remainder);
-  unsigned int precision = ceil(log2(sec->theta)) + 3;
-  // It's interesting that this needed to be ceiling division... I wonder if the
-  // rounding above in key generation needs to be as well...
-  mpz_cdiv_r_2exp(remainder, sum, precision);
-  mpz_fdiv_q_2exp(rounded_sum, sum, precision);
-
-  mpz_t half_sum;
-  mpz_init(half_sum);
-  mpz_fdiv_q_2exp(half_sum, sum, 1);
-  if (mpz_cmp(remainder, half_sum) < 0) {
-	mpz_add_ui(rounded_sum, rounded_sum, 1); // fix "rounding" to round up
-  }
-  mpz_clear(half_sum);
-  mpz_clear(remainder);
-
-  // printf("rounded sum: ");
-  // mpz_out_str(NULL, 10, rounded_sum);
-  // printf("\n");
-  // printf("c*: ");
-  // mpz_out_str(NULL, 10, c.old_ciphertext);
-  // printf("\n");
-
-  mpz_sub(rounded_sum, c.old_ciphertext, rounded_sum);
-  // I think this should really be mpz_odd_p, but this seems to give the correct answer... Investigate later
-  int return_val = mpz_odd_p(rounded_sum);
-
-  mpz_clear(sum);
-  mpz_clear(rounded_sum);
-  return return_val;
-}
-
-bool old_decrypt_bit(mpz_t c, mpz_t sk) {
-  mpz_t temp;
-  mpz_init(temp);
-  mpz_correct_mod(temp, c, sk);
-  int return_val = mpz_odd_p(temp);
-  mpz_clear(temp);
-  return return_val;
-}
-
 CipherBit** FullyHomomorphic::encrypt_bit_vector(const PublicKey &pk, const bool* m_vector, const unsigned long int m_vector_length) {
   CipherBit** c_vector = new CipherBit*[m_vector_length];
   CipherBit* c;
@@ -436,6 +383,43 @@ CipherBit** FullyHomomorphic::encrypt_bit_vector(const PublicKey &pk, const bool
   return c_vector;
 }
 
+// Decrypt ciphertext, producing a bit as follows: For each element i in
+// the private key, subtract z_vector[i] from the ciphertext and return
+// resultant mod 2.
+bool FullyHomomorphic::decrypt_bit(const CipherBit &c, const PrivateKey &sk) {
+  unsigned int precision = ceil(log2(sec->theta)) + 3;
+
+  mpz_t sum, half_sum, rounded_sum, remainder;
+
+  mpz_init(sum);
+  mpz_init(half_sum);
+  mpz_init(rounded_sum);
+  mpz_init(remainder);
+
+  // sum: sum of z_vector[i] for i in private key.
+  for (unsigned int i = 0; i < sec->private_key_length; i++)
+    mpz_add_ui(sum, sum, c.z_vector[sk[i]]);
+
+  mpz_cdiv_r_2exp(remainder, sum, precision);          // remainder: sum % 2^precision
+  mpz_fdiv_q_2exp(rounded_sum, sum, precision);        // rounded_sum: sum / 2^precision
+
+  mpz_fdiv_q_2exp(half_sum, sum, 1);                   // half_sum: sum / 2
+
+  // If the remainder is less than half of the sum, round the sum up.
+  if (mpz_cmp(remainder, half_sum) < 0)
+    mpz_add_ui(rounded_sum, rounded_sum, 1);
+
+  mpz_sub(rounded_sum, c.old_ciphertext, rounded_sum); // rounded_sum: ciphertext - rounded_sum
+
+  bool decrypted_bit = mpz_odd_p(rounded_sum);         // rounded_sum: rounded_sum % 2
+
+  mpz_clear(sum);
+  mpz_clear(half_sum);
+  mpz_clear(rounded_sum);
+  mpz_clear(remainder);
+
+  return decrypted_bit;
+}
 
 bool* FullyHomomorphic::decrypt_bit_vector(const PrivateKey &sk, CipherBit** c_vector, const unsigned long int c_vector_length) {
   bool* m_vector = new bool[c_vector_length];
@@ -446,7 +430,6 @@ bool* FullyHomomorphic::decrypt_bit_vector(const PrivateKey &sk, CipherBit** c_v
   }
   return m_vector;
 }
-
 
 bool FullyHomomorphic::is_allowed_circuit(std::vector<Gate*> output_gates) {
   // d <= (e - 4 - (log fnorm)) / (r + 2)
