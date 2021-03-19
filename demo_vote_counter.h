@@ -4,7 +4,8 @@ class DemoVoteCounter {
   private:
     SecuritySettings* sec;
     FullyHomomorphic* fh;
-    CipherBit** votes;
+
+    CipherBit **votes;
 
     PrivateKey sk;
     PublicKey pk;

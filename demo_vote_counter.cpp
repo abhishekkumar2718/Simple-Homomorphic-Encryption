@@ -45,7 +45,7 @@ bool DemoVoteCounter::verify_vote(unsigned int vote_id) {
   return true;
 }
 
-DemoVoteCounter::DemoVoteCounter(unsigned int num_candidates) : num_candidates(num_candidates) {
+DemoVoteCounter::DemoVoteCounter(unsigned int num_candidates) : num_votes(0), num_candidates(num_candidates) {
   sec = new SecuritySettings(4); // lambda: 4
 
   fh = new FullyHomomorphic(sec);
@@ -55,36 +55,35 @@ DemoVoteCounter::DemoVoteCounter(unsigned int num_candidates) : num_candidates(n
 }
 
 void DemoVoteCounter::get_votes() {
-  int scan_result;
-  unsigned int vote;
-  num_votes = 0;
-  char temp_char;
-  std::vector<CipherBit*> encrypted_votes_vector;
-  CipherBit* encrypted_bit;
+  std::vector<CipherBit*> encrypted_votes;
+
   while (true) {
-	printf("Please enter a vote (1-%u), or 0 to terminate: ", num_candidates);
-	scan_result = scanf("%u", &vote);
-	if (scan_result != 1 || vote > num_candidates) {
-	  printf("Invalid vote, please try again...\n");
-	  while ((temp_char = getchar()) != '\n');
-	  continue;
-	}
-	if (vote == 0) {
-	  break;
-	}
-	for (unsigned int i = 0; i < num_candidates; i++) {
-	  encrypted_bit = new CipherBit;
-	  fh->encrypt_bit(*encrypted_bit, pk, i == vote-1);
-          cout << *encrypted_bit << endl;
-	  encrypted_votes_vector.push_back(encrypted_bit);
-	}
-	num_votes++;
+    unsigned int vote;
+
+    std::cout << "Please enter a vote (1 - " << num_candidates <<"), or 0 to terminate: ";
+    std::cin >> vote;
+
+    if (vote < 0 || vote > num_candidates) {
+      std::cout << "Invalid vote, please try again!" << std::endl;
+      continue;
+    } else if (vote == 0)
+      break;
+
+    num_votes++;
+
+    for (unsigned int i = 0; i < num_candidates; i++) {
+      CipherBit *encrypted_bit = new CipherBit;
+
+      fh->encrypt_bit(*encrypted_bit, pk, (i == vote - 1));
+      encrypted_votes.push_back(encrypted_bit);
+
+      std::cout << *encrypted_bit << std::endl;
+    }
   }
 
-  votes = new CipherBit*[encrypted_votes_vector.size()];
-  for (unsigned int i = 0; i < encrypted_votes_vector.size(); i++) {
-	votes[i] = encrypted_votes_vector[i];
-  }
+  votes = new CipherBit*[encrypted_votes.size()];
+  for (unsigned int i = 0; i < encrypted_votes.size(); i++)
+    votes[i] = encrypted_votes[i];
 }
 
 void DemoVoteCounter::verify_votes() {
