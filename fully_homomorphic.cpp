@@ -420,11 +420,6 @@ bool old_decrypt_bit(mpz_t c, mpz_t sk) {
   return return_val;
 }
 
-void FullyHomomorphic::clear_cipher_bit(CipherBit &c) {
-  mpz_clear(c.old_ciphertext);
-  delete[] c.z_vector;
-}
-
 CipherBit** FullyHomomorphic::encrypt_bit_vector(const PublicKey &pk, const bool* m_vector, const unsigned long int m_vector_length) {
   CipherBit** c_vector = new CipherBit*[m_vector_length];
   CipherBit* c;
@@ -434,7 +429,6 @@ CipherBit** FullyHomomorphic::encrypt_bit_vector(const PublicKey &pk, const bool
 	encrypt_bit(*c, pk, m_vector[i]);
 	c_vector[c_index] = c;
 	c_index++;
-	//clear_cipher_bit(c);
   }
   return c_vector;
 }

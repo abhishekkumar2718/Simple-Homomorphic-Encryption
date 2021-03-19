@@ -78,7 +78,6 @@ class FullyHomomorphic {
 
   void encrypt_bit(CipherBit &result, const PublicKey &pk, const bool m);
   bool decrypt_bit(const CipherBit &c, const PrivateKey &sk);
-  void clear_cipher_bit(CipherBit &c);
   CipherBit** encrypt_bit_vector(const PublicKey &pk, const bool* m_vector, const unsigned long int m_vector_length);
   bool* decrypt_bit_vector(const PrivateKey &sk, CipherBit** c_vector, const unsigned long int c_vector_length);
   //std::vector<CipherBit> evaluate(CircuitNode *circuit, std::vector<CipherBit> inputs);

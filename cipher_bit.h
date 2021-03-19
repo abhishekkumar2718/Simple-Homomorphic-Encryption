@@ -22,7 +22,10 @@ class CipherBit {
 
     friend ostream& operator<<(ostream &os, const CipherBit &cipher_bit);
 
-    ~CipherBit() { delete[] z_vector; }
+    ~CipherBit() {
+      mpz_clear(old_ciphertext);
+      delete[] z_vector;
+    }
 };
 
 #endif // CIPHER_BIT_H
