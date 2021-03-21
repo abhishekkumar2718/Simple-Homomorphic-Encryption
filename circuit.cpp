@@ -29,7 +29,7 @@ Gate::Gate(GateType gate_type, bool input, SecuritySettings *sec) : sec(sec), ga
   auto z_vector_length = sec->public_key_y_vector_length;
   output_cipher_bits->initialize_z_vector(z_vector_length);
   for (unsigned int i = 0; i < z_vector_length; i++)
-	output_cipher_bits->z_vector[i] = 0;
+    output_cipher_bits->z_vector[i] = 0;
 }
 
 // Output gate

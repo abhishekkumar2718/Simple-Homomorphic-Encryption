@@ -53,7 +53,7 @@ void FullyHomomorphic::generate_somewhat_private_key(SomewhatPrivateKey key) {
   mpz_init(key);
   mpz_init2(temp, sec->eta-1);
 
-  mpz_setbit(temp, sec->eta-2);
+  mpz_setbit(temp, sec->eta-2);        // temp: 2^(eta - 2)
   mpz_add_ui(temp, temp, 1);           // temp: 2^(eta - 2) + 1
 
   mpz_urandomm(key, rand_state, temp); // key:  [0, 2^(eta - 2)]
@@ -391,10 +391,10 @@ CipherBit** FullyHomomorphic::encrypt_bit_vector(const PublicKey &pk, const bool
   CipherBit* c;
   unsigned long int c_index = 0;
   for (unsigned long int i = 0; i < m_vector_length; i++) {
-	c = new CipherBit;
-	encrypt_bit(*c, pk, m_vector[i]);
-	c_vector[c_index] = c;
-	c_index++;
+    c = new CipherBit;
+    encrypt_bit(*c, pk, m_vector[i]);
+    c_vector[c_index] = c;
+    c_index++;
   }
   return c_vector;
 }
@@ -422,6 +422,7 @@ bool FullyHomomorphic::decrypt_bit(const CipherBit &c, const PrivateKey &sk) {
   mpz_fdiv_q_2exp(half_sum, sum, 1);                   // half_sum: sum / 2
 
   // If the remainder is less than half of the sum, round the sum up.
+  // Since rounded sum must be represent the closest integer to the sum.
   if (mpz_cmp(remainder, half_sum) < 0)
     mpz_add_ui(rounded_sum, rounded_sum, 1);
 

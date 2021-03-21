@@ -8,6 +8,8 @@ void CipherBit::initialize_z_vector(const unsigned long int length) {
   z_vector = new unsigned long[length];
 }
 
+// Calculate the z-vector by setting z_vector[i] = ciphertext * y[i],
+// keeping only ceil(log2(theta)) + 3 bits of precision.
 void CipherBit::calculate_z_vector(const SecuritySettings &sec, const PublicKey &pk) {
   unsigned int precision = ceil(log2(sec.theta)) + 3;
   unsigned long bitmask = (1l << (precision + 1)) - 1;
