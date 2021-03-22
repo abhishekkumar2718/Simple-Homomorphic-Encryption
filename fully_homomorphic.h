@@ -111,7 +111,6 @@ class FullyHomomorphic {
 
   std::vector<bool> decrypt_bit_vector(const PrivateKey &sk, CipherBit** c_vector, const unsigned long int c_vector_length);
 
-  // TODO: Refactor along with demo_vote_counter
   CipherBit** encrypt_bit_vector(const PublicKey &pk, const bool* m_vector, const unsigned long int m_vector_length);
 
   // Evaluate the expression represented by the circuit.
